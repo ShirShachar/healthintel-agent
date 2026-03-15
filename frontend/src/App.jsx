@@ -89,36 +89,68 @@ const css = `
   .agent-step.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
   .agent-step.done { background: var(--green-pale); color: var(--green); border-color: var(--green); }
 
-  /* Summary card */
-  .summary-card { border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; margin-bottom: 1.25rem; }
-  .summary-card-header { background: var(--ink); color: var(--paper); padding: 0.75rem 1.25rem; display: flex; justify-content: space-between; align-items: center; }
-  .summary-card-title { font-family: var(--serif); font-size: 1rem; }
-  .summary-card-date { font-family: var(--mono); font-size: 0.65rem; opacity: 0.6; }
-  .summary-card-body { padding: 1.25rem; background: var(--paper); display: flex; flex-direction: column; gap: 1rem; }
-  .status-row { display: flex; align-items: center; gap: 0.75rem; }
-  .status-badge { font-family: var(--mono); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.25rem 0.75rem; border-radius: 20px; white-space: nowrap; }
-  .status-badge.stable { background: var(--green-pale); color: var(--green); border: 1px solid var(--green); }
-  .status-badge.attention { background: var(--amber-pale); color: var(--amber); border: 1px solid var(--amber); }
-  .status-badge.critical { background: var(--accent-pale); color: var(--accent); border: 1px solid var(--accent); }
-  .status-reason { font-size: 0.85rem; line-height: 1.5; color: #444; }
-  .summary-block { }
-  .summary-block-label { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: #999; margin-bottom: 0.5rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--rule); }
-  .findings-list { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
-  .findings-list li { font-size: 0.82rem; line-height: 1.55; padding: 0.4rem 0.6rem; background: var(--cream); border-radius: 3px; border-left: 3px solid var(--ink); }
-  .next-steps { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
-  .next-steps li { font-size: 0.82rem; line-height: 1.55; padding: 0.4rem 0.6rem; background: var(--cream); border-radius: 3px; display: flex; gap: 0.5rem; align-items: flex-start; }
-  .step-num { font-family: var(--mono); font-size: 0.62rem; background: var(--ink); color: var(--paper); width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 0.15rem; }
-  .step-cond { color: var(--blue); font-weight: 600; }
-  .followup-row { font-family: var(--mono); font-size: 0.75rem; color: #666; background: var(--cream); padding: 0.5rem 0.75rem; border-radius: 3px; }
-  .agent-details-toggle { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: #999; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0; border: none; background: none; }
-  .agent-details-toggle:hover { color: var(--ink); }
+  /* Clinical Brief */
+  .brief-wrap { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem; }
 
-  .brief-sections { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem; }
-  .brief-section { border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
-  .brief-section-header { padding: 0.5rem 0.9rem; font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; background: var(--cream); border-bottom: 1px solid var(--rule); }
-  .brief-section-body { padding: 0.9rem; font-size: 0.82rem; line-height: 1.75; white-space: pre-wrap; background: var(--paper); }
-  .brief-section-body strong { font-weight: 600; color: var(--ink); }
-  .brief-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  /* Status banner */
+  .status-banner { border-radius: 4px; padding: 0.75rem 1rem; display: flex; align-items: flex-start; gap: 0.75rem; }
+  .status-banner.stable  { background: var(--green-pale); border: 1px solid var(--green); }
+  .status-banner.attention { background: var(--amber-pale); border: 1px solid var(--amber); }
+  .status-banner.critical  { background: var(--accent-pale); border: 1px solid var(--accent); }
+  .status-pill { font-family: var(--mono); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 20px; white-space: nowrap; flex-shrink: 0; margin-top: 0.05rem; }
+  .status-banner.stable  .status-pill { background: var(--green); color: #fff; }
+  .status-banner.attention .status-pill { background: var(--amber); color: #fff; }
+  .status-banner.critical  .status-pill { background: var(--accent); color: #fff; }
+  .status-reason { font-size: 0.84rem; line-height: 1.55; color: #333; }
+
+  /* Section cards */
+  .brief-section { border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; background: var(--paper); }
+  .brief-section-header { padding: 0.5rem 1rem; font-family: var(--mono); font-size: 0.63rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; background: var(--cream); border-bottom: 1px solid var(--rule); color: #555; }
+  .brief-section-label { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: #999; padding: 0.75rem 1rem 0.35rem; border-bottom: 1px solid var(--rule); }
+
+  /* Findings list */
+  .findings-list { list-style: none; }
+  .findings-list li { display: flex; gap: 0.6rem; align-items: baseline; padding: 0.55rem 1rem; border-bottom: 1px solid var(--rule); font-size: 0.82rem; line-height: 1.55; }
+  .findings-list li:last-child { border-bottom: none; }
+  .finding-num { font-family: var(--mono); font-size: 0.62rem; color: #aaa; flex-shrink: 0; width: 1rem; text-align: right; }
+
+  /* Action steps */
+  .steps-list { list-style: none; }
+  .steps-list li { display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.6rem 1rem; border-bottom: 1px solid var(--rule); }
+  .steps-list li:last-child { border-bottom: none; }
+  .step-num { font-family: var(--mono); font-size: 0.65rem; font-weight: 700; background: var(--ink); color: var(--paper); width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 0.1rem; }
+  .step-body { font-size: 0.82rem; line-height: 1.55; }
+  .step-cond { color: var(--blue); font-weight: 600; }
+  .step-action { color: #333; }
+
+  /* Follow-up bar */
+  .followup-bar { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 1rem; background: var(--cream); border: 1px solid var(--rule); border-radius: 4px; font-size: 0.82rem; }
+  .followup-bar-label { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: #999; white-space: nowrap; }
+
+  /* Entry rows (meds / conditions) */
+  .entry-list { list-style: none; }
+  .entry-item { padding: 0.7rem 1rem; border-bottom: 1px solid var(--rule); }
+  .entry-item:last-child { border-bottom: none; }
+  .entry-name { font-size: 0.84rem; font-weight: 600; margin-bottom: 0.2rem; }
+  .entry-detail { font-size: 0.79rem; color: #555; line-height: 1.6; }
+  .entry-detail span { margin-right: 0.75rem; }
+  .entry-pill { display: inline-block; font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.4rem; border-radius: 10px; margin-left: 0.4rem; vertical-align: middle; }
+  .entry-pill.ok   { background: var(--green-pale); color: var(--green); border: 1px solid var(--green); }
+  .entry-pill.warn { background: var(--amber-pale); color: var(--amber); border: 1px solid var(--amber); }
+  .entry-pill.flag { background: var(--accent-pale); color: var(--accent); border: 1px solid var(--accent); }
+
+  /* Vital rows */
+  .vital-rows { list-style: none; }
+  .vital-row { display: grid; grid-template-columns: 10rem 1fr auto; gap: 0.75rem; align-items: center; padding: 0.5rem 1rem; border-bottom: 1px solid var(--rule); font-size: 0.8rem; }
+  .vital-row:last-child { border-bottom: none; }
+  .vital-row-name { font-weight: 600; color: #333; }
+  .vital-row-range { color: #888; font-size: 0.76rem; }
+  .vital-row-status { font-family: var(--mono); font-size: 0.68rem; white-space: nowrap; }
+
+  /* Environment */
+  .env-body { padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; }
+  .env-line { font-size: 0.82rem; line-height: 1.55; color: #333; }
+  .env-line.precaution { color: var(--amber); font-weight: 500; }
 
   /* Agent cards row */
   .agent-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
@@ -374,6 +406,50 @@ export default function App() {
     a.click();
   };
 
+  // Parse "**Name** [pill?] — detail. Key: val. Key: val." into entry objects
+  const parseEntries = (text) => {
+    if (!text) return [];
+    const entries = [];
+    let current = null;
+    for (const raw of text.split("\n")) {
+      const line = raw.trim();
+      if (!line) continue;
+      const m = line.match(/^\*\*(.+?)\*\*\s*(.*)/);
+      if (m) {
+        if (current) entries.push(current);
+        current = { name: m[1], rest: m[2].replace(/^[-—]\s*/, "") };
+      } else if (current) {
+        current.rest += " " + line;
+      } else {
+        entries.push({ name: null, rest: line });
+      }
+    }
+    if (current) entries.push(current);
+    return entries;
+  };
+
+  // Determine pill status from text
+  const entryPill = (rest) => {
+    if (/uncontrolled/i.test(rest)) return { label: "Uncontrolled", cls: "flag" };
+    if (/borderline/i.test(rest))   return { label: "Borderline",   cls: "warn" };
+    if (/controlled/i.test(rest))   return { label: "Controlled",   cls: "ok"   };
+    if (/⚠️|alert|recall|interaction/i.test(rest)) return { label: "Alert", cls: "warn" };
+    if (/no.*(alert|interaction)/i.test(rest))      return { label: "Clear", cls: "ok"  };
+    return null;
+  };
+
+  // Parse "Label: value → range → status" vital lines
+  const parseVitalRows = (text) => {
+    if (!text) return [];
+    return text.split("\n").filter(l => l.trim() && l.includes(":")).map(line => {
+      const parts = line.split("→").map(p => p.trim());
+      const status = /✅/.test(parts[2] || "") ? "ok"
+        : /⚠️/.test(parts[2] || "") ? "warn"
+        : /🚨/.test(parts[2] || "") ? "flag" : "neutral";
+      return { label: parts[0] || line, range: parts[1] || "", interp: parts[2] || "", status };
+    });
+  };
+
   const parseSection = (text, header) => {
     if (!text) return "";
     const regex = new RegExp(`###[^#\n]*${header}[^\n]*\n([\s\S]*?)(?=\n###|$)`, "i");
@@ -609,106 +685,154 @@ export default function App() {
 
               {/* Report */}
               {report && (() => {
-                const summary = parseSummary(report.final_report);
+                const summary  = parseSummary(report.final_report);
+                const medsText = parseSection(report.final_report, "MEDICATIONS");
+                const condsText= parseSection(report.final_report, "CONDITIONS");
+                const vitText  = parseSection(report.final_report, "VITALS");
+                const envText  = parseSection(report.final_report, "ENVIRONMENT");
+                const medsEntries  = parseEntries(medsText);
+                const condsEntries = parseEntries(condsText);
+                const vitalRows    = parseVitalRows(vitText);
+                const envLines     = (envText || "").split("\n").map(l => l.trim()).filter(Boolean);
                 return (
                   <>
-                    <div className="summary-card">
-                      <div className="summary-card-header">
-                        <div className="summary-card-title">📋 Clinical Brief — {selected.name}</div>
-                        <div className="summary-card-date">Live · {fmt(report.generated_at)}</div>
-                      </div>
-                      <div className="summary-card-body">
-
-                        {/* Status */}
-                        {summary ? (
-                          <div className="status-row">
-                            <span className={`status-badge ${summary.statusLevel}`}>{summary.statusLabel}</span>
-                            {summary.statusReason && <span className="status-reason">{summary.statusReason}</span>}
-                          </div>
-                        ) : (
-                          <div className="status-reason">{report.monitor_summary || "Analysis complete."}</div>
-                        )}
-
-                        {/* Top 3 Findings */}
-                        {summary?.findings?.length > 0 && (
-                          <div className="summary-block">
-                            <div className="summary-block-label">Top Findings</div>
-                            <ul className="findings-list">
-                              {summary.findings.map((f, i) => <li key={i}>{f}</li>)}
-                            </ul>
-                          </div>
-                        )}
-
-                        {/* Next Steps */}
-                        {summary?.nextSteps?.length > 0 && (
-                          <div className="summary-block">
-                            <div className="summary-block-label">Next Steps</div>
-                            <ol className="next-steps">
-                              {summary.nextSteps.map((s, i) => {
-                                const parts = s.match(/^For (.+?) →\s*(.+)$/i);
-                                return (
-                                  <li key={i}>
-                                    <span className="step-num">{i + 1}</span>
-                                    {parts
-                                      ? <span>For <span className="step-cond">{parts[1]}</span> → {parts[2]}</span>
-                                      : <span>{s}</span>}
-                                  </li>
-                                );
-                              })}
-                            </ol>
-                          </div>
-                        )}
-
-                        {/* Follow-up */}
-                        {summary?.followUp && (
-                          <div className="followup-row">📅 Follow-up: {summary.followUp}</div>
-                        )}
-                      </div>
+                    <div style={{ fontFamily: "var(--mono)", fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#999", marginBottom: "0.6rem", display: "flex", justifyContent: "space-between" }}>
+                      <span>Clinical Brief — {selected.name}</span>
+                      <span>{fmt(report.generated_at)}</span>
                     </div>
 
-                    {/* Detail sections */}
-                    {(() => {
-                      const meds     = parseSection(report.final_report, "MEDICATIONS");
-                      const conds    = parseSection(report.final_report, "CONDITIONS");
-                      const vitalsS  = parseSection(report.final_report, "VITALS");
-                      const env      = parseSection(report.final_report, "ENVIRONMENT");
-                      return (
-                        <div className="brief-sections">
-                          {(meds || conds) && (
-                            <div className="brief-two-col">
-                              {meds && (
-                                <div className="brief-section">
-                                  <div className="brief-section-header">💊 Medications</div>
-                                  <div className="brief-section-body"
-                                    dangerouslySetInnerHTML={{ __html: meds.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} />
-                                </div>
-                              )}
-                              {conds && (
-                                <div className="brief-section">
-                                  <div className="brief-section-header">🔬 Conditions</div>
-                                  <div className="brief-section-body"
-                                    dangerouslySetInnerHTML={{ __html: conds.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} />
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          {vitalsS && (
-                            <div className="brief-section">
-                              <div className="brief-section-header">📊 Vitals Interpretation</div>
-                              <div className="brief-section-body"
-                                dangerouslySetInnerHTML={{ __html: vitalsS.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} />
-                            </div>
-                          )}
-                          {env && (
-                            <div className="brief-section">
-                              <div className="brief-section-header">🌍 Environment</div>
-                              <div className="brief-section-body"
-                                dangerouslySetInnerHTML={{ __html: env.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} />
-                            </div>
-                          )}
+                    <div className="brief-wrap">
+
+                      {/* 1. Status */}
+                      {summary && (
+                        <div className={`status-banner ${summary.statusLevel}`}>
+                          <span className="status-pill">{summary.statusLabel}</span>
+                          <span className="status-reason">{summary.statusReason}</span>
                         </div>
-                      );
-                    })()}
+                      )}
+
+                      {/* 2. Key Findings */}
+                      {summary?.findings?.length > 0 && (
+                        <div className="brief-section">
+                          <div className="brief-section-header">Key Findings</div>
+                          <ul className="findings-list">
+                            {summary.findings.map((f, i) => (
+                              <li key={i}>
+                                <span className="finding-num">{i + 1}.</span>
+                                <span>{f}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* 3. Action Steps */}
+                      {summary?.nextSteps?.length > 0 && (
+                        <div className="brief-section">
+                          <div className="brief-section-header">Action Steps</div>
+                          <ul className="steps-list">
+                            {summary.nextSteps.map((s, i) => {
+                              const parts = s.match(/^For (.+?) →\s*(.+)$/i);
+                              return (
+                                <li key={i}>
+                                  <span className="step-num">{i + 1}</span>
+                                  <span className="step-body">
+                                    {parts
+                                      ? <>For <span className="step-cond">{parts[1]}</span> <span style={{ color: "#aaa" }}>→</span> <span className="step-action">{parts[2]}</span></>
+                                      : s}
+                                  </span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* 4. Medications */}
+                      {medsEntries.length > 0 && (
+                        <div className="brief-section">
+                          <div className="brief-section-header">💊 Medications</div>
+                          <ul className="entry-list">
+                            {medsEntries.map((e, i) => {
+                              const pill = e.name ? entryPill(e.rest) : null;
+                              return (
+                                <li key={i} className="entry-item">
+                                  {e.name && (
+                                    <div className="entry-name">
+                                      {e.name}
+                                      {pill && <span className={`entry-pill ${pill.cls}`}>{pill.label}</span>}
+                                    </div>
+                                  )}
+                                  <div className="entry-detail">{e.rest.replace(/^(Controlled|Borderline|Uncontrolled)[—\s]*/i, "")}</div>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* 5. Conditions */}
+                      {condsEntries.length > 0 && (
+                        <div className="brief-section">
+                          <div className="brief-section-header">🔬 Conditions</div>
+                          <ul className="entry-list">
+                            {condsEntries.map((e, i) => {
+                              const pill = e.name ? entryPill(e.rest) : null;
+                              return (
+                                <li key={i} className="entry-item">
+                                  {e.name && (
+                                    <div className="entry-name">
+                                      {e.name}
+                                      {pill && <span className={`entry-pill ${pill.cls}`}>{pill.label}</span>}
+                                    </div>
+                                  )}
+                                  <div className="entry-detail">{e.rest.replace(/^(Controlled|Borderline|Uncontrolled)[—\s]*/i, "")}</div>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* 6. Vitals */}
+                      {vitalRows.length > 0 && (
+                        <div className="brief-section">
+                          <div className="brief-section-header">📊 Vitals</div>
+                          <ul className="vital-rows">
+                            {vitalRows.map((v, i) => (
+                              <li key={i} className="vital-row">
+                                <span className="vital-row-name">{v.label}</span>
+                                <span className="vital-row-range">{v.range}</span>
+                                <span className="vital-row-status">{v.interp}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* 7. Environment */}
+                      {envLines.length > 0 && (
+                        <div className="brief-section">
+                          <div className="brief-section-header">🌍 Environment</div>
+                          <div className="env-body">
+                            {envLines.map((l, i) => (
+                              <div key={i} className={`env-line ${/precaution/i.test(l) ? "precaution" : ""}`}>
+                                {l.replace(/^\*\*(.+?)\*\*/g, "$1")}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 8. Follow-up */}
+                      {summary?.followUp && (
+                        <div className="followup-bar">
+                          <span className="followup-bar-label">Follow-up</span>
+                          <span>{summary.followUp}</span>
+                        </div>
+                      )}
+
+                    </div>
                   </>
                 );
               })()}
