@@ -384,24 +384,32 @@ export default function App() {
 
   const parseSummary = (text) => {
     if (!text) return null;
-    const block = text.match(/###[^#]*SUMMARY([\s\S]*?)(?=###|$)/i)?.[1] || "";
 
-    const statusLine = block.match(/\*\*Status:\*\*\s*(.+)/i)?.[1]?.trim() || null;
-    const statusLevel = !statusLine ? "stable"
-      : /critical/i.test(statusLine) ? "critical"
-      : /attention|monitor|concern/i.test(statusLine) ? "attention"
+    // Parse STATUS section
+    const statusContent = parseSection(text, "STATUS");
+    if (!statusContent) return null;
+    const statusLine = statusContent.split("\n")[0].trim();
+    const statusLevel = /critical/i.test(statusLine) ? "critical"
+      : /attention|concern|uncontrolled|borderline/i.test(statusLine) ? "attention"
       : "stable";
     const statusLabel = statusLevel === "critical" ? "Critical"
       : statusLevel === "attention" ? "Needs Attention" : "Stable";
-    const statusReason = statusLine?.replace(/^(stable|needs attention|critical)\s*[—–-]\s*/i, "").trim() || "";
+    const statusReason = statusLine.replace(/^(stable|needs attention|critical)\s*[—–\-]\s*/i, "").trim();
 
-    const findingsBlock = block.match(/\*\*Top 3 Findings[^*]*\*\*([\s\S]*?)(?=\*\*Next Steps|\*\*Follow)/i)?.[1] || "";
-    const findings = [...findingsBlock.matchAll(/^\d+\.\s*(.+)/gm)].map(m => m[1].trim()).slice(0, 3);
+    // Parse KEY FINDINGS bullets
+    const findingsContent = parseSection(text, "KEY FINDINGS") || parseSection(text, "FINDINGS");
+    const findings = findingsContent
+      ? [...findingsContent.matchAll(/^[•\-\*]\s*(.+)/gm)].map(m => m[1].trim()).slice(0, 3)
+      : [];
 
-    const stepsBlock = block.match(/\*\*Next Steps[^*]*\*\*([\s\S]*?)(?=\*\*Follow)/i)?.[1] || "";
-    const nextSteps = [...stepsBlock.matchAll(/^\d+\.\s*(.+)/gm)].map(m => m[1].trim()).slice(0, 4);
+    // Parse NEXT STEPS numbered list
+    const stepsContent = parseSection(text, "NEXT STEPS") || parseSection(text, "NEXT STEP");
+    const nextSteps = stepsContent
+      ? [...stepsContent.matchAll(/^\d+\.\s*(.+)/gm)].map(m => m[1].trim()).slice(0, 4)
+      : [];
 
-    const followUp = block.match(/\*\*Follow-up[^:*]*:?\*\*\s*(.+)/i)?.[1]?.trim() || null;
+    // Parse FOLLOW-UP
+    const followUp = parseSection(text, "FOLLOW-UP")?.split("\n")[0]?.trim() || null;
 
     return { statusLevel, statusLabel, statusReason, findings, nextSteps, followUp };
   };
