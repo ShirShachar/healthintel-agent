@@ -46,6 +46,10 @@ def get_patient(patient_id: str) -> dict:
         for field in ("created_at", "updated_at", "last_analyzed"):
             if field in patient and hasattr(patient[field], "isoformat"):
                 patient[field] = patient[field].isoformat() + "Z"
+        if "last_report" in patient and isinstance(patient["last_report"], dict):
+            lr = patient["last_report"]
+            if "generated_at" in lr and hasattr(lr["generated_at"], "isoformat"):
+                lr["generated_at"] = lr["generated_at"].isoformat() + "Z"
     return patient
 
 
@@ -150,9 +154,15 @@ def update_patient_after_analysis(patient_id: str, result: dict):
         {"_id": ObjectId(patient_id)},
         {"$set": {
             "last_analyzed": datetime.utcnow(),
-            "last_recommendations": result.get("research_findings", []),
-            "last_medication_alerts": result.get("medication_alerts", []),
-            "last_environment_risks": result.get("environment_risks", []),
+            "last_report": {
+                "final_report": result.get("final_report"),
+                "research_findings": result.get("research_findings", []),
+                "medication_alerts": result.get("medication_alerts", []),
+                "environment_risks": result.get("environment_risks", []),
+                "monitor_summary": result.get("monitor_summary"),
+                "errors": result.get("errors", []),
+                "generated_at": datetime.utcnow(),
+            },
             "updated_at": datetime.utcnow(),
         }}
     )

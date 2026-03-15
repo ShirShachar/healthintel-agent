@@ -211,9 +211,13 @@ export default function App() {
   useEffect(() => {
     if (!selected?._id) return;
     setHistory([]);
+    setReport(null);
     fetch(`${API_BASE}/patients/${selected._id}`)
       .then(r => r.json())
-      .then(p => setSelected(p))
+      .then(p => {
+        setSelected(p);
+        if (p.last_report?.final_report) setReport(p.last_report);
+      })
       .catch(() => { });
     fetch(`${API_BASE}/patients/${selected._id}/reports?limit=10`)
       .then(r => r.json())
@@ -408,7 +412,7 @@ export default function App() {
           <div className="sidebar-label">Patients ({patients.length})</div>
           {patients.map(p => (
             <div key={p._id} className={`patient-card ${selected?._id === p._id ? "active" : ""}`}
-              onClick={() => { setSelected(p); setReport(null); }}>
+              onClick={() => { setSelected(p); setReport(null); setShowAgentDetails(false); }}>
               <div className="patient-card-name">{p.name}</div>
               <div className="patient-card-meta">{p.age}y · {p.gender || "—"} · {p.location || "—"}</div>
               <div style={{ marginTop: "0.3rem" }}>
