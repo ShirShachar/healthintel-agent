@@ -36,6 +36,8 @@ class MonitorAgent:
 
         vitals_str = "\n".join(
             [f"- {k}: {v}" for k, v in vitals.items()]) if vitals else "No vitals recorded"
+        notes = patient_data.get("notes", [])
+        notes_str = "\n".join(f"- {n}" for n in notes) if notes else "None"
 
         prompt = f"""
 You are a clinical monitoring specialist AI. Analyze the following patient vitals and flag any concerns.
@@ -53,6 +55,9 @@ Clinical Benchmarks (from current guidelines):
 
 Recent Research Context:
 {research_context}
+
+Clinical Notes:
+{notes_str}
 
 Provide a structured vitals analysis:
 1. **Overall Status**: (Stable / Needs Attention / Critical)

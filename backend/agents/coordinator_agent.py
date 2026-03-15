@@ -1,12 +1,11 @@
 """
 Agent 5 - Coordinator Agent
-Synthesizes all agent findings into a unified patient health report.
-This is the "brain" that ties everything together.
+Synthesizes all agent findings into a precise, clinical health report.
+Output is specific to the patient's exact conditions, medications, and stage.
 """
-import os
-from datetime import datetime
-
 from openai import OpenAI
+from datetime import datetime
+import os
 
 
 class CoordinatorAgent:
@@ -19,69 +18,84 @@ class CoordinatorAgent:
         medication_alerts = state.get("medication_alerts", [])
         environment_risks = state.get("environment_risks", [])
         monitor_summary = state.get("monitor_summary", "Not available")
-        errors = state.get("errors", [])
 
         patient_name = patient_data.get("name", "Patient")
         patient_id = state.get("patient_id", "Unknown")
+        age = patient_data.get("age", "unknown")
+        gender = patient_data.get("gender", "unknown")
+        location = patient_data.get("location", "unknown")
+        conditions = patient_data.get("conditions", [])
+        medications = patient_data.get("medications", [])
+        vitals = patient_data.get("vitals", {})
 
+        conditions_str = ", ".join(conditions) if conditions else "None listed"
+        medications_str = ", ".join(
+            medications) if medications else "None listed"
+        vitals_str = "\n".join(
+            [f"  - {k}: {v}" for k, v in vitals.items()]) if vitals else "  No vitals recorded"
         research_text = "\n".join(
             research_findings) if research_findings else "No findings"
         medication_text = "\n".join(
             medication_alerts) if medication_alerts else "No alerts"
-        environment_text = "\n".join(
-            environment_risks) if environment_risks else "No risks identified"
+        env_text = "\n".join(
+            environment_risks) if environment_risks else "No risks"
 
         prompt = f"""
-You are a senior physician AI assistant. Create a comprehensive daily health intelligence report
-by synthesizing the findings from 4 specialized AI agents.
+You are a senior physician AI assistant writing a daily clinical intelligence brief for a care team.
+Be PRECISE, SPECIFIC, and ACTIONABLE. Reference the patient's EXACT conditions, medications by name.
+Never write generic advice. Every recommendation must name the specific condition or drug it refers to.
+Consider disease STAGE and progression when relevant.
 
-=== PATIENT: {patient_name} (ID: {patient_id}) ===
-=== REPORT DATE: {datetime.now().strftime("%B %d, %Y at %H:%M")} ===
+=== PATIENT ===
+Name: {patient_name} | Age: {age} | Gender: {gender} | Location: {location}
+Conditions: {conditions_str}
+Medications: {medications_str}
+Vitals:
+{vitals_str}
+Report: {datetime.now().strftime("%B %d, %Y at %H:%M")}
 
---- VITALS MONITORING (Agent 4) ---
-{monitor_summary}
+=== AGENT FINDINGS ===
+[VITALS] {monitor_summary}
+[RESEARCH] {research_text}
+[MEDICATIONS] {medication_text}
+[ENVIRONMENT - {location}] {env_text}
 
---- LATEST MEDICAL RESEARCH (Agent 1) ---
-{research_text}
+Write this EXACT structure — specific, no generic advice:
 
---- MEDICATION SAFETY (Agent 2) ---
-{medication_text}
+## 🏥 {patient_name} — Clinical Brief
+**{datetime.now().strftime("%B %d, %Y · %H:%M")} · Live Data**
 
---- ENVIRONMENTAL HEALTH RISKS (Agent 3) ---
-{environment_text}
+### ⚡ STATUS
+[One line: Stable/Needs Attention/Critical + ONE specific reason naming the condition]
 
---- SYSTEM ERRORS ---
-{', '.join(errors) if errors else 'None'}
+### 📋 KEY FINDINGS
+• [Finding about specific condition or medication — under 20 words]
+• [Finding about specific condition or medication — under 20 words]
+• [Finding about specific condition or medication — under 20 words]
 
-Create a final report with these exact sections:
+### 💊 MEDICATION BRIEF
+[2-3 sentences. Name each medication. State purpose for THIS patient's disease stage. Flag interactions. Confirm FDA clearance.]
 
-## 🏥 PATIENT HEALTH INTELLIGENCE REPORT
+### 🔬 CONDITION UPDATES
+[One bullet per condition. Name condition + stage if relevant. State specific 2025 guideline finding.]
 
-### ⚡ Priority Alerts (if any - list only urgent items)
+### 🌍 ENVIRONMENT — {location}
+[1-2 lines. Specific risks for THIS patient's conditions. Include AQI if available.]
 
-### 📊 Overall Health Status
-(One paragraph summary)
+### ✅ NEXT STEPS
+1. For [Condition/Med] → [Specific action with data point]
+2. For [Condition/Med] → [Specific action with data point]
+3. For [Condition/Med] → [Specific action with data point]
+4. For environment → [Specific action relevant to patient's conditions]
 
-### 💊 Medication Safety
-(Key points from medication agent)
-
-### 🔬 Condition-Specific Updates  
-(Latest research relevant to this patient)
-
-### 🌍 Environmental Factors Today
-(Environmental risks relevant to patient)
-
-### ✅ Recommended Actions for Care Team
-(Numbered list, most urgent first)
-
-### 📅 Follow-up Recommendations
-
-Keep the tone professional, concise, and actionable for medical staff.
+### 📅 FOLLOW-UP
+[Next appointment timeframe + ONE specific priority test or check]
 """
+
         response = self.llm.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=800
+            max_tokens=1000
         )
 
         return response.choices[0].message.content

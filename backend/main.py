@@ -2,18 +2,17 @@
 FastAPI Backend - Patient Health Intelligence System
 """
 import os
-
 from dotenv import load_dotenv
 load_dotenv()
-
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 from graph import health_graph
 from models.patient import (
-    create_patient, get_patient, update_patient_vitals,
-    list_patients, save_report, get_patient_reports, log_query
+    create_patient, get_patient, update_patient, update_patient_vitals,
+    list_patients, save_report, get_patient_reports, log_query, update_patient_after_analysis,
+    add_note, delete_note
 )
 
 app = FastAPI(title="Patient Health Intelligence API", version="1.0.0")
@@ -26,7 +25,6 @@ app.add_middleware(
 )
 
 
-# ── Schemas ───────────────────────────────────────────────────────────────────
 class PatientCreate(BaseModel):
     name: str
     age: int
@@ -64,7 +62,7 @@ def get_all_patients():
 
 @app.post("/patients")
 def create_new_patient(patient: PatientCreate):
-    patient_id = create_patient(patient.dict())
+    patient_id = create_patient(patient.model_dump())
     return {"patient_id": patient_id, "message": "Patient created successfully"}
 
 
@@ -76,9 +74,17 @@ def get_patient_info(patient_id: str):
     return patient
 
 
+@app.put("/patients/{patient_id}")
+def edit_patient(patient_id: str, patient: PatientCreate):
+    if not get_patient(patient_id):
+        raise HTTPException(status_code=404, detail="Patient not found")
+    update_patient(patient_id, patient.model_dump())
+    return {"message": "Patient updated successfully"}
+
+
 @app.post("/patients/{patient_id}/vitals")
 def add_vitals(patient_id: str, vitals: VitalsUpdate):
-    vitals_dict = {k: v for k, v in vitals.dict().items() if v is not None}
+    vitals_dict = {k: v for k, v in vitals.model_dump().items() if v is not None}
     update_patient_vitals(patient_id, vitals_dict)
     return {"message": "Vitals updated successfully"}
 
@@ -93,11 +99,13 @@ async def run_analysis(request: AnalysisRequest):
     # Use latest vitals from history if not provided
     vitals = {}
     if request.vitals:
-        vitals = {k: v for k, v in request.vitals.dict().items()
+        vitals = {k: v for k, v in request.vitals.model_dump().items()
                   if v is not None}
     elif patient.get("vitals_history"):
         vitals = patient["vitals_history"][-1]
         vitals.pop("timestamp", None)
+
+    notes = [n["text"] for n in patient.get("notes", [])]
 
     patient_data = {
         "name": patient["name"],
@@ -107,6 +115,7 @@ async def run_analysis(request: AnalysisRequest):
         "conditions": patient["conditions"],
         "medications": patient["medications"],
         "vitals": vitals,
+        "notes": notes,
     }
 
     # Run LangGraph pipeline
@@ -127,6 +136,7 @@ async def run_analysis(request: AnalysisRequest):
     # Save to MongoDB
     report_id = save_report(request.patient_id, result)
     log_query(request.patient_id, "full_analysis", {"report_id": report_id})
+    update_patient_after_analysis(request.patient_id, result)
 
     return {
         "report_id": report_id,
@@ -138,6 +148,26 @@ async def run_analysis(request: AnalysisRequest):
         "monitor_summary": result.get("monitor_summary"),
         "errors": result.get("errors", []),
     }
+
+
+class NoteCreate(BaseModel):
+    text: str
+
+
+@app.post("/patients/{patient_id}/notes")
+def create_note(patient_id: str, note: NoteCreate):
+    if not get_patient(patient_id):
+        raise HTTPException(status_code=404, detail="Patient not found")
+    note_id = add_note(patient_id, note.text)
+    return {"note_id": note_id, "message": "Note added"}
+
+
+@app.delete("/patients/{patient_id}/notes/{note_id}")
+def remove_note(patient_id: str, note_id: str):
+    if not get_patient(patient_id):
+        raise HTTPException(status_code=404, detail="Patient not found")
+    delete_note(patient_id, note_id)
+    return {"message": "Note deleted"}
 
 
 @app.get("/patients/{patient_id}/reports")

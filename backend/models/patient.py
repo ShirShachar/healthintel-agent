@@ -1,21 +1,18 @@
 """
 MongoDB Models - Patient Health Intelligence System
 """
-import os
-from datetime import datetime
-
 from pymongo import MongoClient
+from datetime import datetime
+import os
 
 
 def get_db():
-    """Return the MongoDB database instance."""
     client = MongoClient(os.getenv("MONGODB_URI"))
     return client[os.getenv("MONGODB_DB", "patient_health_intelligence")]
 
 
 # ── Patient Model ─────────────────────────────────────────────────────────────
 def create_patient(patient_data: dict) -> str:
-    """Insert a new patient document and return its inserted ID."""
     db = get_db()
     patient = {
         "name": patient_data["name"],
@@ -33,17 +30,35 @@ def create_patient(patient_data: dict) -> str:
 
 
 def get_patient(patient_id: str) -> dict:
-    """Fetch a single patient by ID, returning None if not found."""
     from bson import ObjectId
     db = get_db()
     patient = db.patients.find_one({"_id": ObjectId(patient_id)})
     if patient:
         patient["_id"] = str(patient["_id"])
+        for note in patient.get("notes", []):
+            if "_id" in note:
+                note["_id"] = str(note["_id"])
+            if "created_at" in note and hasattr(note["created_at"], "isoformat"):
+                note["created_at"] = note["created_at"].isoformat() + "Z"
+        for v in patient.get("vitals_history", []):
+            if "timestamp" in v and hasattr(v["timestamp"], "isoformat"):
+                v["timestamp"] = v["timestamp"].isoformat() + "Z"
+        for field in ("created_at", "updated_at", "last_analyzed"):
+            if field in patient and hasattr(patient[field], "isoformat"):
+                patient[field] = patient[field].isoformat() + "Z"
     return patient
 
 
+def update_patient(patient_id: str, patient_data: dict):
+    from bson import ObjectId
+    db = get_db()
+    fields = {k: v for k, v in patient_data.items() if k in
+              ("name", "age", "gender", "location", "conditions", "medications")}
+    fields["updated_at"] = datetime.utcnow()
+    db.patients.update_one({"_id": ObjectId(patient_id)}, {"$set": fields})
+
+
 def update_patient_vitals(patient_id: str, vitals: dict):
-    """Append a vitals entry to the patient's vitals_history."""
     from bson import ObjectId
     db = get_db()
     vitals_entry = {"timestamp": datetime.utcnow(), **vitals}
@@ -57,10 +72,9 @@ def update_patient_vitals(patient_id: str, vitals: dict):
 
 
 def list_patients() -> list:
-    """Return a summary list of all patients."""
     db = get_db()
-    patients = list(db.patients.find(
-        {}, {"name": 1, "age": 1, "conditions": 1, "updated_at": 1}))
+    patients = list(db.patients.find({}, {"name": 1, "age": 1, "gender": 1, "location": 1,
+                    "conditions": 1, "medications": 1, "last_analyzed": 1, "updated_at": 1}))
     for p in patients:
         p["_id"] = str(p["_id"])
     return patients
@@ -68,7 +82,6 @@ def list_patients() -> list:
 
 # ── Report Model ──────────────────────────────────────────────────────────────
 def save_report(patient_id: str, report_data: dict) -> str:
-    """Persist a generated health report and return its inserted ID."""
     db = get_db()
     report = {
         "patient_id": patient_id,
@@ -85,7 +98,6 @@ def save_report(patient_id: str, report_data: dict) -> str:
 
 
 def get_patient_reports(patient_id: str, limit: int = 10) -> list:
-    """Return the most recent reports for a patient, newest first."""
     db = get_db()
     reports = list(
         db.reports.find(
@@ -98,9 +110,29 @@ def get_patient_reports(patient_id: str, limit: int = 10) -> list:
     return reports
 
 
+# ── Notes Model ───────────────────────────────────────────────────────────────
+def add_note(patient_id: str, text: str) -> str:
+    from bson import ObjectId
+    db = get_db()
+    note = {"_id": ObjectId(), "text": text, "created_at": datetime.utcnow()}
+    db.patients.update_one(
+        {"_id": ObjectId(patient_id)},
+        {"$push": {"notes": note}, "$set": {"updated_at": datetime.utcnow()}}
+    )
+    return str(note["_id"])
+
+
+def delete_note(patient_id: str, note_id: str):
+    from bson import ObjectId
+    db = get_db()
+    db.patients.update_one(
+        {"_id": ObjectId(patient_id)},
+        {"$pull": {"notes": {"_id": ObjectId(note_id)}}}
+    )
+
+
 # ── Query Log Model ───────────────────────────────────────────────────────────
 def log_query(patient_id: str, query_type: str, metadata: dict = None):
-    """Record a query event for a patient in the query_logs collection."""
     db = get_db()
     db.query_logs.insert_one({
         "patient_id": patient_id,
@@ -108,3 +140,19 @@ def log_query(patient_id: str, query_type: str, metadata: dict = None):
         "metadata": metadata or {},
         "timestamp": datetime.utcnow(),
     })
+
+
+def update_patient_after_analysis(patient_id: str, result: dict):
+    """Update patient profile with latest analysis findings and timestamp."""
+    from bson import ObjectId
+    db = get_db()
+    db.patients.update_one(
+        {"_id": ObjectId(patient_id)},
+        {"$set": {
+            "last_analyzed": datetime.utcnow(),
+            "last_recommendations": result.get("research_findings", []),
+            "last_medication_alerts": result.get("medication_alerts", []),
+            "last_environment_risks": result.get("environment_risks", []),
+            "updated_at": datetime.utcnow(),
+        }}
+    )

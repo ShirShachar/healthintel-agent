@@ -1,6 +1,8 @@
 """
 Patient Health Intelligence System - LangGraph Orchestrator
 """
+from dotenv import load_dotenv
+load_dotenv()
 from langgraph.graph import StateGraph, END
 from typing import TypedDict, Annotated, List, Optional
 import operator
