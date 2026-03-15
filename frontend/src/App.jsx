@@ -113,6 +113,13 @@ const css = `
   .agent-details-toggle { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: #999; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0; border: none; background: none; }
   .agent-details-toggle:hover { color: var(--ink); }
 
+  .brief-sections { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem; }
+  .brief-section { border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+  .brief-section-header { padding: 0.5rem 0.9rem; font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; background: var(--cream); border-bottom: 1px solid var(--rule); }
+  .brief-section-body { padding: 0.9rem; font-size: 0.82rem; line-height: 1.75; white-space: pre-wrap; background: var(--paper); }
+  .brief-section-body strong { font-weight: 600; color: var(--ink); }
+  .brief-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
   /* Agent cards row */
   .agent-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
   .agent-card { border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
@@ -365,6 +372,14 @@ export default function App() {
     a.href = URL.createObjectURL(blob);
     a.download = `${selected?.name?.replace(" ", "_")}_${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
+  };
+
+  const parseSection = (text, header) => {
+    if (!text) return "";
+    const regex = new RegExp(`###[^#\n]*${header}[^\n]*\n([\s\S]*?)(?=\n###|$)`, "i");
+    const match = text.match(regex);
+    if (!match) return "";
+    return match[1].trim();
   };
 
   const parseSummary = (text) => {
@@ -643,33 +658,49 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Agent source details toggle */}
-                    <button className="agent-details-toggle" onClick={() => setShowAgentDetails(v => !v)}>
-                      {showAgentDetails ? "▲ Hide" : "▼ Show"} agent source data
-                    </button>
-
-                    {showAgentDetails && (
-                      <>
-                        <div className="agent-grid" style={{ marginTop: "0.5rem" }}>
-                          <div className="agent-card">
-                            <div className="agent-card-header green">🔬 Research</div>
-                            <div className="agent-card-body">{report.research_findings?.[0] || "No findings"}</div>
-                          </div>
-                          <div className="agent-card">
-                            <div className="agent-card-header amber">💊 Medication</div>
-                            <div className="agent-card-body">{report.medication_alerts?.[0] || "No alerts"}</div>
-                          </div>
-                          <div className="agent-card">
-                            <div className="agent-card-header red">🌍 Environment</div>
-                            <div className="agent-card-body">{report.environment_risks?.[0] || "No risks"}</div>
-                          </div>
+                    {/* Detail sections */}
+                    {(() => {
+                      const meds     = parseSection(report.final_report, "MEDICATIONS");
+                      const conds    = parseSection(report.final_report, "CONDITIONS");
+                      const vitalsS  = parseSection(report.final_report, "VITALS");
+                      const env      = parseSection(report.final_report, "ENVIRONMENT");
+                      return (
+                        <div className="brief-sections">
+                          {(meds || conds) && (
+                            <div className="brief-two-col">
+                              {meds && (
+                                <div className="brief-section">
+                                  <div className="brief-section-header">💊 Medications</div>
+                                  <div className="brief-section-body"
+                                    dangerouslySetInnerHTML={{ __html: meds.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} />
+                                </div>
+                              )}
+                              {conds && (
+                                <div className="brief-section">
+                                  <div className="brief-section-header">🔬 Conditions</div>
+                                  <div className="brief-section-body"
+                                    dangerouslySetInnerHTML={{ __html: conds.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {vitalsS && (
+                            <div className="brief-section">
+                              <div className="brief-section-header">📊 Vitals Interpretation</div>
+                              <div className="brief-section-body"
+                                dangerouslySetInnerHTML={{ __html: vitalsS.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} />
+                            </div>
+                          )}
+                          {env && (
+                            <div className="brief-section">
+                              <div className="brief-section-header">🌍 Environment</div>
+                              <div className="brief-section-body"
+                                dangerouslySetInnerHTML={{ __html: env.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} />
+                            </div>
+                          )}
                         </div>
-                        <div className="vitals-card">
-                          <div className="vitals-card-header">📊 Vitals Monitor</div>
-                          <div className="vitals-card-body">{report.monitor_summary || "No vitals data"}</div>
-                        </div>
-                      </>
-                    )}
+                      );
+                    })()}
                   </>
                 );
               })()}

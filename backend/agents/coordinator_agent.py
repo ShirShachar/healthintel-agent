@@ -40,62 +40,76 @@ class CoordinatorAgent:
         env_text = "\n".join(
             environment_risks) if environment_risks else "No risks"
 
+        notes = patient_data.get("notes", [])
+        notes_text = "\n".join(f"- {n}" for n in notes) if notes else "None"
+
         prompt = f"""
-You are a senior physician AI assistant writing a daily clinical intelligence brief for a care team.
-Be PRECISE, SPECIFIC, and ACTIONABLE. Reference the patient's EXACT conditions, medications by name.
-Never write generic advice. Every recommendation must name the specific condition or drug it refers to.
-Consider disease STAGE and progression when relevant.
+You are a senior physician writing a daily clinical brief for a hands-on care team (nurses, physicians, pharmacists).
+The team needs actionable, specific detail — not summaries. Every section must reference actual data from the agent findings.
+Never use vague language like "monitor closely" or "as appropriate". Always name the specific drug, condition, value, or threshold.
 
 === PATIENT ===
 Name: {patient_name} | Age: {age} | Gender: {gender} | Location: {location}
 Conditions: {conditions_str}
 Medications: {medications_str}
-Vitals:
+Current Vitals:
 {vitals_str}
+Clinical Notes: {notes_text}
 Report: {datetime.now().strftime("%B %d, %Y at %H:%M")}
 
 === AGENT FINDINGS ===
-[VITALS] {monitor_summary}
+[VITALS ANALYSIS] {monitor_summary}
 [RESEARCH] {research_text}
-[MEDICATIONS] {medication_text}
+[MEDICATION SAFETY] {medication_text}
 [ENVIRONMENT - {location}] {env_text}
 
-Write this EXACT structure — specific, no generic advice:
+---
+Write EXACTLY this structure. Each section must be substantive — no placeholder text:
 
 ## 🏥 {patient_name} — Clinical Brief
-**{datetime.now().strftime("%B %d, %Y · %H:%M")} · Live Data**
+**{datetime.now().strftime("%B %d, %Y · %H:%M")} · Live Intelligence**
 
 ### ⚡ STATUS
-[One line: Stable/Needs Attention/Critical + ONE specific reason naming the condition]
+[Stable / Needs Attention / Critical] — [one sentence: name the specific condition and the exact data point (vital value, drug alert, or research finding) driving this assessment]
 
 ### 📋 KEY FINDINGS
-• [Finding about specific condition or medication — under 20 words]
-• [Finding about specific condition or medication — under 20 words]
-• [Finding about specific condition or medication — under 20 words]
+• [Specific finding — name condition or drug, cite the value or fact. E.g. "Blood glucose at 187 mg/dL exceeds ADA target of <180 mg/dL post-meal for Type 2 Diabetes"]
+• [Second finding — same specificity standard]
+• [Third finding — same specificity standard]
 
-### 💊 MEDICATION BRIEF
-[2-3 sentences. Name each medication. State purpose for THIS patient's disease stage. Flag interactions. Confirm FDA clearance.]
+### 💊 MEDICATIONS
+Write one entry per medication in this list: {medications_str}
+Format each as:
+**[Drug]** — Role: [what it treats for THIS patient's specific condition and stage]. Status: [any active FDA alert, interaction risk, or "No current alerts"]. Watch: [the one monitoring parameter most relevant right now, with target value].
 
-### 🔬 CONDITION UPDATES
-[One bullet per condition. Name condition + stage if relevant. State specific 2025 guideline finding.]
+### 🔬 CONDITIONS
+Write one entry per condition in this list: {conditions_str}
+Format each as:
+**[Condition]** [Controlled / Borderline / Uncontrolled] — [the specific vital or lab value supporting this assessment]. Research update: [the most specific finding from the research agent relevant to this condition — a threshold, guideline change, or clinical recommendation with a number or date].
+
+### 📊 VITALS
+For each vital that was recorded, one line:
+[Vital name]: [value] → [normal range for this patient's age and conditions] → [clinical interpretation: normal / borderline / flag]
+If no vitals recorded, write: No vitals recorded for this visit.
 
 ### 🌍 ENVIRONMENT — {location}
-[1-2 lines. Specific risks for THIS patient's conditions. Include AQI if available.]
+Risk level: [Low / Medium / High] — [specific environmental factor and why it matters for {patient_name}'s conditions by name].
+Precaution: [one concrete action for today, tied to a named condition].
 
 ### ✅ NEXT STEPS
-1. For [Condition/Med] → [Specific action with data point]
-2. For [Condition/Med] → [Specific action with data point]
-3. For [Condition/Med] → [Specific action with data point]
-4. For environment → [Specific action relevant to patient's conditions]
+1. For [specific condition or drug] → [concrete action — include a target value, timeframe, or clinical threshold]
+2. For [specific condition or drug] → [concrete action]
+3. For [specific condition or drug] → [concrete action]
+4. For environment/other → [concrete action]
 
 ### 📅 FOLLOW-UP
-[Next appointment timeframe + ONE specific priority test or check]
+[Specific timeframe] to [specific test or check] — reason: [one sentence naming the condition and what you expect to see].
 """
 
         response = self.llm.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=1000
+            max_tokens=1500
         )
 
         return response.choices[0].message.content
