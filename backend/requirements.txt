@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pymongo
+langgraph
+openai
+tavily-python
+pydantic
+python-dotenv

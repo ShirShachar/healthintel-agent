@@ -4,18 +4,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`healthintel-agent` is a Python project (inferred from `.gitignore`). The repository is in its initial state with no source code yet.
+`healthintel-agent` is a Python-based health intelligence agent with a separate frontend. It uses Docker Compose for orchestration and `uv` as the preferred Python package manager.
 
 ## Package Management
 
-The `.gitignore` includes entries for `uv`, `pipenv`, `poetry`, and `pdm`. Use `uv` as the preferred package manager unless the project establishes otherwise.
-
 ```bash
-uv venv          # create virtual environment
-uv pip install   # install dependencies
-uv run <cmd>     # run commands in the venv
+uv venv                  # create virtual environment
+uv pip install -r requirements.txt  # install dependencies
+uv run <cmd>             # run commands in the venv
 ```
 
 ## Commands
 
-Update this section as the project grows with build, lint, test, and run commands.
+Update this section as tooling is added (build, lint, test, run commands).
+
+```bash
+docker-compose up        # start all services (once docker-compose.yml is populated)
+```
+
+## Architecture
+
+```
+backend/
+  agentd/        # agent daemon — core agent logic lives here
+  models/
+    patient.py   # patient data model
+  scripts/       # utility/automation scripts
+frontend/        # UI (framework TBD)
+docker-compose.yml
+```
+
+- **backend/agentd/** is the primary agent runtime; this is where agent orchestration, tools, and LLM calls will be implemented.
+- **backend/models/** holds domain data models starting with `patient.py`.
+- The project is containerized via Docker Compose; `docker-compose.yml` is a placeholder pending service definitions.
