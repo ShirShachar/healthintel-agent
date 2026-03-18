@@ -18,7 +18,7 @@ class ResearchAgent:
         findings = []
 
         for condition in conditions:
-            # 1. Search latest research
+            # 1. Search latest research (domain-restricted, fall back to open search)
             search_results = self.tavily.search(
                 query=f"latest treatment guidelines {condition} 2024 2025",
                 search_depth="advanced",
@@ -26,9 +26,15 @@ class ResearchAgent:
                                  "cdc.gov", "who.int", "mayoclinic.org"],
                 max_results=3
             )
+            if not search_results.get("results"):
+                search_results = self.tavily.search(
+                    query=f"latest clinical guidelines {condition} treatment 2025",
+                    search_depth="advanced",
+                    max_results=3
+                )
 
             # 2. Extract full content from top result
-            if search_results["results"]:
+            if search_results.get("results"):
                 top_url = search_results["results"][0]["url"]
                 try:
                     extracted = self.tavily.extract(urls=[top_url])

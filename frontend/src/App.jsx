@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-// MongoDB returns UTC datetimes without Z — append it so JS parses correctly
 const parseUTC = (d) => {
   if (!d) return null;
   const s = String(d);
@@ -37,11 +36,6 @@ const css = `
 
   .masthead { border-bottom: 2px solid var(--ink); padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; background: var(--paper); }
   .masthead-title { font-family: var(--serif); font-size: 1.7rem; letter-spacing: -0.02em; }
-  .masthead-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.1rem; }
-  .masthead-sub { font-family: var(--mono); font-size: 0.65rem; color: #888; letter-spacing: 0.1em; text-transform: uppercase; }
-  .live-badge { font-family: var(--mono); font-size: 0.62rem; color: var(--green); background: var(--green-pale); border: 1px solid var(--green); padding: 0.15rem 0.5rem; border-radius: 20px; display: flex; align-items: center; gap: 0.3rem; }
-  .live-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: blink 1.5s ease-in-out infinite; }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
   .layout { display: grid; grid-template-columns: 270px 1fr; min-height: calc(100vh - 60px); }
   .sidebar { border-right: 1px solid var(--rule); padding: 1.25rem; background: var(--cream); overflow-y: auto; }
@@ -57,29 +51,63 @@ const css = `
   .tag.med { background: var(--amber-pale); border-color: var(--amber); color: var(--amber); }
   .tag.cond { background: var(--blue-pale); border-color: var(--blue); color: var(--blue); }
 
-  .main { padding: 1.75rem 2rem; overflow-y: auto; }
+  .main { padding: 1.75rem 2rem; overflow-y: auto; max-height: calc(100vh - 60px); }
 
+  /* ── PATIENT HEADER ── */
   .patient-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid var(--rule); }
-  .patient-name { font-family: var(--serif); font-size: 1.6rem; letter-spacing: -0.01em; margin-bottom: 0.25rem; }
-  .patient-subtitle { font-family: var(--mono); font-size: 0.68rem; color: #999; }
-  .btn-row { display: flex; gap: 0.6rem; align-items: center; }
-
-  .btn { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.55rem 1.1rem; border: 1.5px solid var(--ink); border-radius: 3px; background: var(--ink); color: var(--paper); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .patient-name { font-family: var(--serif); font-size: 1.6rem; letter-spacing: -0.01em; margin-bottom: 0.2rem; }
+  .patient-subtitle { font-family: var(--mono); font-size: 0.65rem; color: #999; }
+  .btn-row { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+  .btn { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.5rem 1rem; border: 1.5px solid var(--ink); border-radius: 3px; background: var(--ink); color: var(--paper); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
   .btn:hover { background: #2a2a2a; }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .btn.outline { background: transparent; color: var(--ink); }
   .btn.outline:hover { background: var(--ink); color: var(--paper); }
 
-  /* Demographics strip */
-  .demo-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; margin-bottom: 1.25rem; }
-  .demo-cell { background: var(--cream); border: 1px solid var(--rule); border-radius: 4px; padding: 0.65rem 0.85rem; }
-  .demo-cell-label { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: #999; margin-bottom: 0.25rem; }
-  .demo-cell-value { font-size: 0.88rem; font-weight: 600; }
+  /* ── ZONE LABELS ── */
+  .zone-label { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase; color: #bbb; padding: 0.3rem 0; margin: 1.25rem 0 0.75rem; border-top: 1px solid var(--rule); display: flex; justify-content: space-between; align-items: center; }
+  .zone-label span.live { color: var(--accent); font-weight: 600; }
 
-  /* Conditions + Meds row */
-  .demo-tags-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem; }
-  .demo-tags-box { background: var(--cream); border: 1px solid var(--rule); border-radius: 4px; padding: 0.75rem 0.9rem; }
-  .demo-tags-title { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: #999; margin-bottom: 0.5rem; }
+  /* ── PERMANENT SNAPSHOT (Zone A) ── */
+  .snapshot { border: 1.5px solid var(--ink); border-radius: 6px; overflow: hidden; margin-bottom: 0; }
+  .snapshot-header { background: #e8edf2; color: #1a2332; padding: 0.65rem 1.1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccd4de; }
+  .snapshot-title { font-family: var(--serif); font-size: 0.95rem; }
+  .snapshot-meta { font-family: var(--mono); font-size: 0.6rem; color: #6b7a8d; }
+
+  /* Status bar inside snapshot */
+  .snap-status { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 1.1rem; border-bottom: 1px solid var(--rule); }
+  .snap-status.stable    { background: var(--green-pale); }
+  .snap-status.attention { background: var(--amber-pale); }
+  .snap-status.critical  { background: var(--accent-pale); }
+  .snap-pill { font-family: var(--mono); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.18rem 0.55rem; border-radius: 20px; color: #fff; flex-shrink: 0; }
+  .snap-status.stable    .snap-pill { background: var(--green); }
+  .snap-status.attention .snap-pill { background: var(--amber); }
+  .snap-status.critical  .snap-pill { background: var(--accent); }
+  .snap-reason { font-size: 0.82rem; color: #333; line-height: 1.4; }
+  .snap-no-analysis { padding: 0.6rem 1.1rem; font-family: var(--mono); font-size: 0.7rem; color: #bbb; background: var(--cream); border-bottom: 1px solid var(--rule); }
+
+  /* Snapshot info rows */
+  .snap-row { display: flex; align-items: baseline; gap: 0.75rem; padding: 0.5rem 1.1rem; border-bottom: 1px solid var(--rule); }
+  .snap-row:last-child { border-bottom: none; }
+  .snap-row-label { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: #aaa; width: 6rem; flex-shrink: 0; }
+  .snap-row-val { font-size: 0.82rem; color: #333; }
+
+  /* Vitals clinical table */
+  .vitals-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .vitals-table thead tr { background: #e8edf2; color: #1a2332; }
+  .vitals-table thead th { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.55rem 0.9rem; text-align: left; font-weight: 600; border-bottom: 1px solid #ccd4de; }
+  .vitals-table tbody tr:nth-child(odd)  { background: var(--cream); }
+  .vitals-table tbody tr:nth-child(even) { background: var(--paper); }
+  .vitals-table td { padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--rule); color: #333; vertical-align: middle; }
+  .vitals-table td:first-child { font-family: var(--mono); font-size: 0.72rem; color: #666; }
+  .vitals-table td:nth-child(2) { font-weight: 600; }
+  .vitals-table td:nth-child(3) { font-family: var(--mono); font-size: 0.7rem; color: #999; }
+  .vitals-badge { font-family: var(--mono); font-size: 0.58rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.18rem 0.55rem; border-radius: 20px; display: inline-block; }
+  .vitals-badge.normal     { background: var(--green-pale);  color: var(--green); border: 1px solid var(--green); }
+  .vitals-badge.borderline { background: var(--amber-pale);  color: var(--amber); border: 1px solid var(--amber); }
+  .vitals-badge.abnormal   { background: var(--accent-pale); color: var(--accent); border: 1px solid var(--accent); }
+  .vitals-badge.na         { background: var(--cream); color: #bbb; border: 1px solid var(--rule); }
+  .vitals-table-footer { font-family: var(--mono); font-size: 0.6rem; color: #aaa; padding: 0.45rem 0.9rem; border-top: 1px solid var(--rule); background: var(--cream); }
 
   /* Agent progress */
   .pulse-bar { height: 3px; background: linear-gradient(90deg, var(--accent), var(--amber), var(--green), var(--accent)); background-size: 200% 100%; animation: pulse 1.5s linear infinite; border-radius: 2px; margin-bottom: 1rem; }
@@ -89,92 +117,56 @@ const css = `
   .agent-step.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
   .agent-step.done { background: var(--green-pale); color: var(--green); border-color: var(--green); }
 
-  /* Clinical Brief */
-  .brief-wrap { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem; }
+  /* ── LIVE INTELLIGENCE SUMMARY (Zone B) ── */
+  .live-summary { border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; margin-bottom: 1rem; }
+  .live-summary-header { background: var(--cream); padding: 0.6rem 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--rule); }
+  .live-summary-title { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #555; font-weight: 600; }
+  .live-summary-date { font-family: var(--mono); font-size: 0.6rem; color: #aaa; }
 
-  /* Status banner */
-  .status-banner { border-radius: 4px; padding: 0.75rem 1rem; display: flex; align-items: flex-start; gap: 0.75rem; }
-  .status-banner.stable  { background: var(--green-pale); border: 1px solid var(--green); }
-  .status-banner.attention { background: var(--amber-pale); border: 1px solid var(--amber); }
-  .status-banner.critical  { background: var(--accent-pale); border: 1px solid var(--accent); }
-  .status-pill { font-family: var(--mono); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 20px; white-space: nowrap; flex-shrink: 0; margin-top: 0.05rem; }
-  .status-banner.stable  .status-pill { background: var(--green); color: #fff; }
-  .status-banner.attention .status-pill { background: var(--amber); color: #fff; }
-  .status-banner.critical  .status-pill { background: var(--accent); color: #fff; }
-  .status-reason { font-size: 0.84rem; line-height: 1.55; color: #333; }
-
-  /* Section cards */
-  .brief-section { border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; background: var(--paper); }
-  .brief-section-header { padding: 0.5rem 1rem; font-family: var(--mono); font-size: 0.63rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; background: var(--cream); border-bottom: 1px solid var(--rule); color: #555; }
-  .brief-section-label { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: #999; padding: 0.75rem 1rem 0.35rem; border-bottom: 1px solid var(--rule); }
-
-  /* Findings list */
+  /* Key findings */
   .findings-list { list-style: none; }
   .findings-list li { display: flex; gap: 0.6rem; align-items: baseline; padding: 0.55rem 1rem; border-bottom: 1px solid var(--rule); font-size: 0.82rem; line-height: 1.55; }
   .findings-list li:last-child { border-bottom: none; }
-  .finding-num { font-family: var(--mono); font-size: 0.62rem; color: #aaa; flex-shrink: 0; width: 1rem; text-align: right; }
+  .finding-num { font-family: var(--mono); font-size: 0.6rem; color: #bbb; flex-shrink: 0; }
 
-  /* Action steps */
+  /* Next steps */
   .steps-list { list-style: none; }
   .steps-list li { display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.6rem 1rem; border-bottom: 1px solid var(--rule); }
   .steps-list li:last-child { border-bottom: none; }
-  .step-num { font-family: var(--mono); font-size: 0.65rem; font-weight: 700; background: var(--ink); color: var(--paper); width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 0.1rem; }
-  .step-body { font-size: 0.82rem; line-height: 1.55; }
+  .step-num { font-family: var(--mono); font-size: 0.62rem; font-weight: 700; background: var(--ink); color: var(--paper); width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 0.15rem; }
   .step-cond { color: var(--blue); font-weight: 600; }
-  .step-action { color: #333; }
+  .step-body { font-size: 0.82rem; line-height: 1.55; }
+  .followup-bar { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 1rem; background: var(--cream); border-top: 1px solid var(--rule); font-size: 0.8rem; }
+  .followup-label { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: #aaa; flex-shrink: 0; }
 
-  /* Follow-up bar */
-  .followup-bar { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 1rem; background: var(--cream); border: 1px solid var(--rule); border-radius: 4px; font-size: 0.82rem; }
-  .followup-bar-label { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: #999; white-space: nowrap; }
-
-  /* Entry rows (meds / conditions) */
-  .entry-list { list-style: none; }
-  .entry-item { padding: 0.7rem 1rem; border-bottom: 1px solid var(--rule); }
-  .entry-item:last-child { border-bottom: none; }
-  .entry-name { font-size: 0.84rem; font-weight: 600; margin-bottom: 0.2rem; }
-  .entry-detail { font-size: 0.79rem; color: #555; line-height: 1.6; }
-  .entry-detail span { margin-right: 0.75rem; }
-  .entry-pill { display: inline-block; font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.1rem 0.4rem; border-radius: 10px; margin-left: 0.4rem; vertical-align: middle; }
-  .entry-pill.ok   { background: var(--green-pale); color: var(--green); border: 1px solid var(--green); }
-  .entry-pill.warn { background: var(--amber-pale); color: var(--amber); border: 1px solid var(--amber); }
-  .entry-pill.flag { background: var(--accent-pale); color: var(--accent); border: 1px solid var(--accent); }
-
-  /* Vital rows */
-  .vital-rows { list-style: none; }
-  .vital-row { display: grid; grid-template-columns: 10rem 1fr auto; gap: 0.75rem; align-items: center; padding: 0.5rem 1rem; border-bottom: 1px solid var(--rule); font-size: 0.8rem; }
-  .vital-row:last-child { border-bottom: none; }
-  .vital-row-name { font-weight: 600; color: #333; }
-  .vital-row-range { color: #888; font-size: 0.76rem; }
-  .vital-row-status { font-family: var(--mono); font-size: 0.68rem; white-space: nowrap; }
-
-  /* Environment */
-  .env-body { padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; }
-  .env-line { font-size: 0.82rem; line-height: 1.55; color: #333; }
-  .env-line.precaution { color: var(--amber); font-weight: 500; }
-
-  /* Agent cards row */
+  /* ── AGENT CARDS ── */
   .agent-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
   .agent-card { border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
-  .agent-card-header { padding: 0.55rem 0.9rem; font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; display: flex; align-items: center; gap: 0.4rem; }
-  .agent-card-header.green { background: var(--green); color: var(--paper); }
-  .agent-card-header.amber { background: var(--amber); color: var(--paper); }
-  .agent-card-header.red { background: var(--accent); color: var(--paper); }
-  .agent-card-body { padding: 0.9rem; font-size: 0.78rem; line-height: 1.65; white-space: pre-wrap; background: var(--paper); max-height: 140px; overflow-y: auto; }
+  .agent-card-hdr { padding: 0.5rem 0.85rem; font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
+  .agent-card-hdr.green { background: var(--green); color: #fff; }
+  .agent-card-hdr.amber { background: var(--amber); color: #fff; }
+  .agent-card-hdr.blue  { background: var(--blue);  color: #fff; }
+  .agent-card-body { padding: 0.8rem; font-size: 0.78rem; line-height: 1.65; white-space: pre-wrap; background: var(--paper); max-height: 130px; overflow-y: auto; color: #444; }
 
-  .vitals-card { border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; margin-bottom: 1rem; }
-  .vitals-card-header { padding: 0.55rem 0.9rem; background: var(--blue); color: var(--paper); font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; }
-  .vitals-card-body { padding: 0.9rem; font-size: 0.82rem; line-height: 1.7; white-space: pre-wrap; background: var(--paper); }
+  /* ── NOTES ── */
+  .section-hdr { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: #999; margin-bottom: 0.6rem; padding-bottom: 0.35rem; border-bottom: 1px solid var(--rule); display: flex; justify-content: space-between; }
+  .notes-input-row { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
+  .notes-textarea { flex: 1; padding: 0.55rem 0.75rem; border: 1px solid var(--rule); border-radius: 3px; font-family: var(--sans); font-size: 0.82rem; background: var(--paper); color: var(--ink); resize: none; height: 56px; }
+  .notes-textarea:focus { outline: none; border-color: var(--ink); }
+  .note-item { border: 1px solid var(--rule); border-radius: 4px; padding: 0.6rem 0.85rem; margin-bottom: 0.35rem; background: var(--paper); display: flex; gap: 0.6rem; }
+  .note-body { flex: 1; font-size: 0.82rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .note-meta { font-family: var(--mono); font-size: 0.58rem; color: #aaa; margin-top: 0.2rem; }
+  .note-del { font-family: var(--mono); font-size: 0.62rem; color: #ccc; background: none; border: none; cursor: pointer; padding: 0.1rem 0.3rem; border-radius: 2px; flex-shrink: 0; }
+  .note-del:hover { color: var(--accent); background: var(--accent-pale); }
 
-  /* History section */
-  .history-section { margin-top: 1.5rem; }
-  .history-header { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; color: #999; margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--rule); display: flex; justify-content: space-between; align-items: center; }
-  .history-item { border: 1px solid var(--rule); border-radius: 4px; margin-bottom: 0.5rem; overflow: hidden; cursor: pointer; background: var(--paper); transition: border-color 0.15s; }
+  /* ── HISTORY ── */
+  .history-item { border: 1px solid var(--rule); border-radius: 4px; margin-bottom: 0.4rem; overflow: hidden; cursor: pointer; background: var(--paper); transition: border-color 0.15s; }
   .history-item:hover { border-color: var(--ink); }
-  .history-item-header { padding: 0.65rem 1rem; display: flex; justify-content: space-between; align-items: center; background: var(--cream); }
-  .history-item-date { font-family: var(--mono); font-size: 0.68rem; font-weight: 500; }
-  .history-item-ago { font-family: var(--mono); font-size: 0.62rem; color: #999; }
-  .history-item-body { padding: 0.9rem 1rem; font-size: 0.8rem; line-height: 1.65; white-space: pre-wrap; border-top: 1px solid var(--rule); max-height: 200px; overflow-y: auto; }
-  .history-empty { font-family: var(--mono); font-size: 0.72rem; color: #bbb; padding: 1rem 0; }
+  .history-item-hdr { padding: 0.6rem 1rem; display: flex; justify-content: space-between; align-items: center; background: var(--cream); }
+  .history-item-date { font-family: var(--mono); font-size: 0.66rem; font-weight: 500; }
+  .history-item-ago { font-family: var(--mono); font-size: 0.6rem; color: #999; }
+  .history-item-body { padding: 0.85rem 1rem; font-size: 0.78rem; line-height: 1.65; white-space: pre-wrap; border-top: 1px solid var(--rule); max-height: 180px; overflow-y: auto; }
+  .empty-sub { font-family: var(--mono); font-size: 0.7rem; color: #ccc; padding: 0.75rem 0; }
 
   .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -184,34 +176,54 @@ const css = `
   .empty-text { font-family: var(--serif); font-size: 1.1rem; font-style: italic; }
 
   .modal-overlay { position: fixed; inset: 0; background: rgba(15,17,23,0.55); display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }
-  .modal { background: var(--paper); border: 1.5px solid var(--ink); border-radius: 6px; width: 600px; max-height: 85vh; overflow-y: auto; padding: 1.75rem; }
+  .modal { background: var(--paper); border: 1.5px solid var(--ink); border-radius: 6px; width: 580px; max-height: 85vh; overflow-y: auto; padding: 1.75rem; }
   .modal-title { font-family: var(--serif); font-size: 1.3rem; margin-bottom: 1.25rem; padding-bottom: 0.65rem; border-bottom: 1px solid var(--rule); }
   .form-group { margin-bottom: 0.85rem; }
-  .form-label { display: block; font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #777; margin-bottom: 0.35rem; }
-  .form-input { width: 100%; padding: 0.55rem 0.75rem; border: 1px solid var(--rule); border-radius: 3px; font-family: var(--sans); font-size: 0.85rem; background: var(--paper); color: var(--ink); transition: border-color 0.15s; }
+  .form-label { display: block; font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: #777; margin-bottom: 0.35rem; }
+  .form-input { width: 100%; padding: 0.55rem 0.75rem; border: 1px solid var(--rule); border-radius: 3px; font-family: var(--sans); font-size: 0.85rem; background: var(--paper); color: var(--ink); }
   .form-input:focus { outline: none; border-color: var(--ink); }
-
-  .section-divider { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: #bbb; margin: 1.25rem 0 0.75rem; padding-bottom: 0.35rem; border-bottom: 1px solid var(--rule); }
-
-  .vitals-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1.25rem; }
-  .vital-cell { background: var(--cream); border: 1px solid var(--rule); border-radius: 4px; padding: 0.65rem 0.85rem; }
-  .vital-cell-label { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: #999; margin-bottom: 0.25rem; }
-  .vital-cell-value { font-size: 0.95rem; font-weight: 600; }
-  .vital-cell-unit { font-family: var(--mono); font-size: 0.6rem; color: #aaa; margin-left: 0.2rem; }
-  .vital-cell-empty { color: #ccc; font-size: 0.85rem; }
-  .vitals-section-header { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: #999; margin-bottom: 0.6rem; padding-bottom: 0.35rem; border-bottom: 1px solid var(--rule); display: flex; justify-content: space-between; align-items: center; }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-
-  .notes-section { margin-bottom: 1.25rem; }
-  .notes-input-row { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
-  .notes-textarea { flex: 1; padding: 0.55rem 0.75rem; border: 1px solid var(--rule); border-radius: 3px; font-family: var(--sans); font-size: 0.82rem; background: var(--paper); color: var(--ink); resize: none; height: 60px; transition: border-color 0.15s; }
-  .notes-textarea:focus { outline: none; border-color: var(--ink); }
-  .note-item { border: 1px solid var(--rule); border-radius: 4px; padding: 0.65rem 0.9rem; margin-bottom: 0.4rem; background: var(--paper); display: flex; gap: 0.75rem; align-items: flex-start; }
-  .note-item-body { flex: 1; font-size: 0.82rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
-  .note-item-meta { font-family: var(--mono); font-size: 0.6rem; color: #aaa; margin-top: 0.25rem; }
-  .note-delete { font-family: var(--mono); font-size: 0.65rem; color: #ccc; background: none; border: none; cursor: pointer; padding: 0.15rem 0.3rem; border-radius: 2px; flex-shrink: 0; }
-  .note-delete:hover { color: var(--accent); background: var(--accent-pale); }
+  .modal-divider { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: #bbb; margin: 1rem 0 0.75rem; padding-bottom: 0.35rem; border-bottom: 1px solid var(--rule); }
 `;
+
+const cleanText = (t) => {
+  if (!t) return "";
+  return t.replace(/^#{1,4}\s*/gm, "").replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/^[•*\-]\s+/gm, "").replace(/^---+$/gm, "")
+    .replace(/\n{3,}/g, "\n\n").trim();
+};
+
+const parseSection = (text, header) => {
+  if (!text) return "";
+  const regex = new RegExp(`###[^#\n]*${header}[^\n]*\n([\\s\\S]*?)(?=\n###|$)`, "i");
+  const m = text.match(regex);
+  return m ? m[1].trim() : "";
+};
+
+const parseSummary = (text) => {
+  if (!text) return null;
+  const statusRaw = parseSection(text, "STATUS");
+  if (!statusRaw) return null;
+  const statusLine = statusRaw.split("\n")[0].trim();
+  const level = /critical/i.test(statusLine) ? "critical"
+    : /attention|concern|uncontrolled|borderline/i.test(statusLine) ? "attention" : "stable";
+  const label = level === "critical" ? "Critical" : level === "attention" ? "Needs Attention" : "Stable";
+  const reason = statusLine.replace(/^(stable|needs attention|critical)\s*[—–\-]\s*/i, "").trim();
+
+  const findingsRaw = parseSection(text, "KEY FINDINGS") || parseSection(text, "FINDINGS");
+  const findings = findingsRaw
+    ? [...findingsRaw.matchAll(/^[•\-*]\s*(.+)/gm)].map(m => m[1].trim()).slice(0, 3) : [];
+
+  const stepsRaw = parseSection(text, "NEXT STEPS") || parseSection(text, "NEXT STEP");
+  const nextSteps = stepsRaw
+    ? [...stepsRaw.matchAll(/^\d+\.\s*(.+)/gm)].map(m => m[1].trim()).slice(0, 4) : [];
+
+  const followUp = parseSection(text, "FOLLOW-UP")?.split("\n")[0]?.trim() || null;
+  return { level, label, reason, findings, nextSteps, followUp };
+};
+
+const EMPTY_P = { name: "", age: "", gender: "Female", location: "", conditions: "", medications: "" };
+const EMPTY_V = { heart_rate: "", blood_pressure_systolic: "", blood_pressure_diastolic: "", temperature: "", oxygen_saturation: "", blood_glucose: "", weight_kg: "" };
 
 export default function App() {
   const [patients, setPatients] = useState([]);
@@ -221,322 +233,129 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [activeStep, setActiveStep] = useState(-1);
   const [showModal, setShowModal] = useState(false);
-  const [editingPatient, setEditingPatient] = useState(null); // null = adding, patient obj = editing
   const [showVitalsModal, setShowVitalsModal] = useState(false);
+  const [editingPatient, setEditingPatient] = useState(null);
   const [expandedHistory, setExpandedHistory] = useState(null);
-  const [showAgentDetails, setShowAgentDetails] = useState(false);
-  const [now, setNow] = useState(new Date());
-  const EMPTY_PATIENT = { name: "", age: "", gender: "Female", location: "", conditions: "", medications: "" };
-  const EMPTY_VITALS = { heart_rate: "", blood_pressure_systolic: "", blood_pressure_diastolic: "", temperature: "", oxygen_saturation: "", blood_glucose: "", weight_kg: "" };
-  const [newPatient, setNewPatient] = useState(EMPTY_PATIENT);
-  const [newVitals, setNewVitals] = useState(EMPTY_VITALS);
+  const [newPatient, setNewPatient] = useState(EMPTY_P);
+  const [newVitals, setNewVitals] = useState(EMPTY_V);
   const [noteText, setNoteText] = useState("");
 
-  // Live clock
+
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 30000);
-    return () => clearInterval(t);
+    fetch(`${API_BASE}/patients`).then(r => r.json()).then(d => setPatients(d.patients || [])).catch(() => { });
   }, []);
 
-  // Load patients on mount
-  useEffect(() => {
-    fetch(`${API_BASE}/patients`)
-      .then(r => r.json())
-      .then(d => setPatients(d.patients || []))
-      .catch(() => { });
-  }, []);
-
-  // Load full patient + history when patient selected
   useEffect(() => {
     if (!selected?._id) return;
-    setHistory([]);
-    setReport(null);
-    fetch(`${API_BASE}/patients/${selected._id}`)
-      .then(r => r.json())
-      .then(p => {
-        setSelected(p);
-        if (p.last_report?.final_report) setReport(p.last_report);
-      })
-      .catch(() => { });
-    fetch(`${API_BASE}/patients/${selected._id}/reports?limit=10`)
-      .then(r => r.json())
-      .then(d => setHistory(d.reports || []))
-      .catch(() => { });
+    setHistory([]); setReport(null);
+    fetch(`${API_BASE}/patients/${selected._id}`).then(r => r.json()).then(p => {
+      setSelected(p);
+      if (p.last_report?.final_report) setReport(p.last_report);
+    }).catch(() => { });
+    fetch(`${API_BASE}/patients/${selected._id}/reports?limit=10`).then(r => r.json()).then(d => setHistory(d.reports || [])).catch(() => { });
   }, [selected?._id]);
 
   const runAnalysis = async () => {
     if (!selected) return;
-    setLoading(true);
-    setReport(null);
-    setActiveStep(0);
-
-    for (let i = 0; i < AGENT_STEPS.length; i++) {
-      setActiveStep(i);
-      await new Promise(r => setTimeout(r, 900));
-    }
-
+    setLoading(true); setReport(null); setActiveStep(0);
+    for (let i = 0; i < AGENT_STEPS.length; i++) { setActiveStep(i); await new Promise(r => setTimeout(r, 900)); }
     try {
       const res = await fetch(`${API_BASE}/analyze`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ patient_id: selected._id }),
       });
       const data = await res.json();
-      const reportWithDate = { ...data, generated_at: new Date().toISOString() };
-      setReport(reportWithDate);
-      // Prepend to history
-      setHistory(prev => [{ _id: data.report_id, final_report: data.final_report, generated_at: reportWithDate.generated_at }, ...prev]);
-      // Refresh patient to pick up last_analyzed
-      fetch(`${API_BASE}/patients/${selected._id}`)
-        .then(r => r.json())
-        .then(p => {
-          setSelected(p);
-          setPatients(prev => prev.map(x => x._id === p._id ? p : x));
-        }).catch(() => { });
-    } catch {
-      console.error("Analysis failed");
-    }
-
-    setLoading(false);
-    setActiveStep(-1);
+      const r = { ...data, generated_at: new Date().toISOString() };
+      setReport(r);
+      setHistory(prev => [{ _id: data.report_id, final_report: data.final_report, generated_at: r.generated_at }, ...prev]);
+      fetch(`${API_BASE}/patients/${selected._id}`).then(x => x.json()).then(p => {
+        setSelected(p); setPatients(prev => prev.map(x => x._id === p._id ? p : x));
+      }).catch(() => { });
+    } catch (err) { console.error("Analysis failed", err); alert("Analysis failed — check that the backend is running and API keys are set."); }
+    setLoading(false); setActiveStep(-1);
   };
 
   const savePatient = async () => {
     const body = {
-      name: newPatient.name,
-      age: parseInt(newPatient.age),
-      gender: newPatient.gender,
-      location: newPatient.location,
+      name: newPatient.name, age: parseInt(newPatient.age), gender: newPatient.gender, location: newPatient.location,
       conditions: newPatient.conditions.split(",").map(s => s.trim()).filter(Boolean),
-      medications: newPatient.medications.split(",").map(s => s.trim()).filter(Boolean),
+      medications: newPatient.medications.split(",").map(s => s.trim()).filter(Boolean)
     };
-    const vitalsBody = Object.fromEntries(
-      Object.entries(newVitals).filter(([, v]) => v !== "").map(([k, v]) => [k, parseFloat(v)])
-    );
-
+    const vitalsBody = Object.fromEntries(Object.entries(newVitals).filter(([, v]) => v !== "").map(([k, v]) => [k, parseFloat(v)]));
     if (editingPatient) {
-      // Update existing patient
-      await fetch(`${API_BASE}/patients/${editingPatient._id}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-      }).catch(() => {});
-      if (Object.keys(vitalsBody).length > 0) {
-        await fetch(`${API_BASE}/patients/${editingPatient._id}/vitals`, {
-          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(vitalsBody),
-        }).catch(() => {});
-      }
+      await fetch(`${API_BASE}/patients/${editingPatient._id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => { });
+      if (Object.keys(vitalsBody).length > 0) await fetch(`${API_BASE}/patients/${editingPatient._id}/vitals`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(vitalsBody) }).catch(() => { });
       const updated = await fetch(`${API_BASE}/patients/${editingPatient._id}`).then(r => r.json()).catch(() => null);
-      if (updated) {
-        setSelected(updated);
-        setPatients(prev => prev.map(p => p._id === updated._id ? updated : p));
-      }
+      if (updated) { setSelected(updated); setPatients(prev => prev.map(p => p._id === updated._id ? updated : p)); }
     } else {
-      // Create new patient
       try {
-        const res = await fetch(`${API_BASE}/patients`, {
-          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-        });
+        const res = await fetch(`${API_BASE}/patients`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
         const data = await res.json();
+        if (Object.keys(vitalsBody).length > 0) await fetch(`${API_BASE}/patients/${data.patient_id}/vitals`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(vitalsBody) }).catch(() => { });
         const newP = { _id: data.patient_id, ...body };
-        if (Object.keys(vitalsBody).length > 0) {
-          await fetch(`${API_BASE}/patients/${data.patient_id}/vitals`, {
-            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(vitalsBody),
-          }).catch(() => {});
-        }
-        setPatients(prev => [newP, ...prev]);
-        setSelected(newP);
-      } catch {
-        const newP = { _id: `local_${Date.now()}`, ...body };
-        setPatients(prev => [newP, ...prev]);
-        setSelected(newP);
-      }
+        setPatients(prev => [newP, ...prev]); setSelected(newP);
+      } catch { const newP = { _id: `local_${Date.now()}`, ...body }; setPatients(prev => [newP, ...prev]); setSelected(newP); }
     }
-    setShowModal(false);
-    setEditingPatient(null);
-    setNewPatient(EMPTY_PATIENT);
-    setNewVitals(EMPTY_VITALS);
+    setShowModal(false); setEditingPatient(null); setNewPatient(EMPTY_P); setNewVitals(EMPTY_V);
   };
 
   const submitVitals = async () => {
-    const body = Object.fromEntries(
-      Object.entries(newVitals)
-        .filter(([, v]) => v !== "")
-        .map(([k, v]) => [k, parseFloat(v)])
-    );
-    try {
-      await fetch(`${API_BASE}/patients/${selected._id}/vitals`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-      });
-      // Refresh full patient to pick up new vitals_history
-      fetch(`${API_BASE}/patients/${selected._id}`)
-        .then(r => r.json())
-        .then(p => setSelected(p))
-        .catch(() => { });
-    } catch { console.error("Vitals submission failed"); }
-    setShowVitalsModal(false);
-    setNewVitals(EMPTY_VITALS);
+    const body = Object.fromEntries(Object.entries(newVitals).filter(([, v]) => v !== "").map(([k, v]) => [k, parseFloat(v)]));
+    await fetch(`${API_BASE}/patients/${selected._id}/vitals`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => { });
+    fetch(`${API_BASE}/patients/${selected._id}`).then(r => r.json()).then(p => setSelected(p)).catch(() => { });
+    setShowVitalsModal(false); setNewVitals(EMPTY_V);
   };
 
   const submitNote = async () => {
     if (!noteText.trim()) return;
-    await fetch(`${API_BASE}/patients/${selected._id}/notes`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: noteText.trim() }),
-    }).catch(() => {});
+    await fetch(`${API_BASE}/patients/${selected._id}/notes`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: noteText.trim() }) }).catch(() => { });
     setNoteText("");
-    fetch(`${API_BASE}/patients/${selected._id}`).then(r => r.json()).then(p => {
-      setSelected(p);
-      setPatients(prev => prev.map(x => x._id === p._id ? p : x));
-    }).catch(() => {});
+    fetch(`${API_BASE}/patients/${selected._id}`).then(r => r.json()).then(p => { setSelected(p); setPatients(prev => prev.map(x => x._id === p._id ? p : x)); }).catch(() => { });
   };
 
-  const deleteNoteById = async (noteId) => {
-    await fetch(`${API_BASE}/patients/${selected._id}/notes/${noteId}`, { method: "DELETE" }).catch(() => {});
-    fetch(`${API_BASE}/patients/${selected._id}`).then(r => r.json()).then(p => {
-      setSelected(p);
-      setPatients(prev => prev.map(x => x._id === p._id ? p : x));
-    }).catch(() => {});
+  const deleteNote = async (noteId) => {
+    await fetch(`${API_BASE}/patients/${selected._id}/notes/${noteId}`, { method: "DELETE" }).catch(() => { });
+    fetch(`${API_BASE}/patients/${selected._id}`).then(r => r.json()).then(p => { setSelected(p); setPatients(prev => prev.map(x => x._id === p._id ? p : x)); }).catch(() => { });
   };
 
   const exportReport = () => {
     if (!report) return;
     const blob = new Blob([report.final_report], { type: "text/plain" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${selected?.name?.replace(" ", "_")}_${new Date().toISOString().slice(0, 10)}.txt`;
-    a.click();
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = `${selected?.name?.replace(" ", "_")}_${new Date().toISOString().slice(0, 10)}.txt`; a.click();
   };
 
-  // Parse "**Name** [pill?] — detail. Key: val. Key: val." into entry objects
-  const parseEntries = (text) => {
-    if (!text) return [];
-    const entries = [];
-    let current = null;
-    for (const raw of text.split("\n")) {
-      const line = raw.trim();
-      if (!line) continue;
-      const m = line.match(/^\*\*(.+?)\*\*\s*(.*)/);
-      if (m) {
-        if (current) entries.push(current);
-        current = { name: m[1], rest: m[2].replace(/^[-—]\s*/, "") };
-      } else if (current) {
-        current.rest += " " + line;
-      } else {
-        entries.push({ name: null, rest: line });
-      }
-    }
-    if (current) entries.push(current);
-    return entries;
-  };
-
-  // Determine pill status from text
-  const entryPill = (rest) => {
-    if (/uncontrolled/i.test(rest)) return { label: "Uncontrolled", cls: "flag" };
-    if (/borderline/i.test(rest))   return { label: "Borderline",   cls: "warn" };
-    if (/controlled/i.test(rest))   return { label: "Controlled",   cls: "ok"   };
-    if (/⚠️|alert|recall|interaction/i.test(rest)) return { label: "Alert", cls: "warn" };
-    if (/no.*(alert|interaction)/i.test(rest))      return { label: "Clear", cls: "ok"  };
-    return null;
-  };
-
-  // Parse "Label: value → range → status" vital lines
-  const parseVitalRows = (text) => {
-    if (!text) return [];
-    return text.split("\n").filter(l => l.trim() && l.includes(":")).map(line => {
-      const parts = line.split("→").map(p => p.trim());
-      const status = /✅/.test(parts[2] || "") ? "ok"
-        : /⚠️/.test(parts[2] || "") ? "warn"
-        : /🚨/.test(parts[2] || "") ? "flag" : "neutral";
-      return { label: parts[0] || line, range: parts[1] || "", interp: parts[2] || "", status };
-    });
-  };
-
-  const parseSection = (text, header) => {
-    if (!text) return "";
-    const regex = new RegExp(`###[^#\n]*${header}[^\n]*\n([\s\S]*?)(?=\n###|$)`, "i");
-    const match = text.match(regex);
-    if (!match) return "";
-    return match[1].trim();
-  };
-
-  const parseSummary = (text) => {
-    if (!text) return null;
-
-    // Parse STATUS section
-    const statusContent = parseSection(text, "STATUS");
-    if (!statusContent) return null;
-    const statusLine = statusContent.split("\n")[0].trim();
-    const statusLevel = /critical/i.test(statusLine) ? "critical"
-      : /attention|concern|uncontrolled|borderline/i.test(statusLine) ? "attention"
-      : "stable";
-    const statusLabel = statusLevel === "critical" ? "Critical"
-      : statusLevel === "attention" ? "Needs Attention" : "Stable";
-    const statusReason = statusLine.replace(/^(stable|needs attention|critical)\s*[—–\-]\s*/i, "").trim();
-
-    // Parse KEY FINDINGS bullets
-    const findingsContent = parseSection(text, "KEY FINDINGS") || parseSection(text, "FINDINGS");
-    const findings = findingsContent
-      ? [...findingsContent.matchAll(/^[•\-\*]\s*(.+)/gm)].map(m => m[1].trim()).slice(0, 3)
-      : [];
-
-    // Parse NEXT STEPS numbered list
-    const stepsContent = parseSection(text, "NEXT STEPS") || parseSection(text, "NEXT STEP");
-    const nextSteps = stepsContent
-      ? [...stepsContent.matchAll(/^\d+\.\s*(.+)/gm)].map(m => m[1].trim()).slice(0, 4)
-      : [];
-
-    // Parse FOLLOW-UP
-    const followUp = parseSection(text, "FOLLOW-UP")?.split("\n")[0]?.trim() || null;
-
-    return { statusLevel, statusLabel, statusReason, findings, nextSteps, followUp };
-  };
+  const latestVitals = selected?.vitals_history?.[selected.vitals_history.length - 1];
+  const summary = report ? parseSummary(report.final_report) : null;
 
   return (
     <>
       <style>{css}</style>
-
       <header className="masthead">
         <div className="masthead-title">HealthIntel</div>
-        <div className="masthead-right">
-          <div className="live-badge">
-            <div className="live-dot" />
-            Live · {now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
-          </div>
-          <div className="masthead-sub">Tavily + LangGraph · Multi-Agent Intelligence</div>
-        </div>
       </header>
 
       <div className="layout">
-        {/* Sidebar */}
         <aside className="sidebar">
           <div className="sidebar-label">Patients ({patients.length})</div>
           {patients.map(p => (
             <div key={p._id} className={`patient-card ${selected?._id === p._id ? "active" : ""}`}
-              onClick={() => { setSelected(p); setReport(null); setShowAgentDetails(false); }}>
+              onClick={() => { setSelected(p); setReport(null); }}>
               <div className="patient-card-name">{p.name}</div>
               <div className="patient-card-meta">{p.age}y · {p.gender || "—"} · {p.location || "—"}</div>
-              <div style={{ marginTop: "0.3rem" }}>
-                {p.conditions?.slice(0, 2).map(c => <span key={c} className="tag cond">{c}</span>)}
-              </div>
-              {p.last_analyzed && (
-                <div className="patient-card-analyzed">● Analyzed {timeAgo(p.last_analyzed)}</div>
-              )}
+              <div style={{ marginTop: "0.3rem" }}>{p.conditions?.slice(0, 2).map(c => <span key={c} className="tag cond">{c}</span>)}</div>
+              {p.last_analyzed && <div className="patient-card-analyzed">● Analyzed {timeAgo(p.last_analyzed)}</div>}
             </div>
           ))}
-          <button className="btn outline" style={{ width: "100%", marginTop: "0.6rem" }} onClick={() => setShowModal(true)}>
-            + Add Patient
-          </button>
+          <button className="btn outline" style={{ width: "100%", marginTop: "0.6rem" }} onClick={() => setShowModal(true)}>+ Add Patient</button>
         </aside>
 
-        {/* Main */}
         <main className="main">
           {!selected ? (
-            <div className="empty-state">
-              <div className="empty-icon">🏥</div>
-              <div className="empty-text">Select a patient to begin</div>
-            </div>
+            <div className="empty-state"><div className="empty-icon">🏥</div><div className="empty-text">Select a patient to begin</div></div>
           ) : (
             <>
-              {/* Patient Header */}
+              {/* Header */}
               <div className="patient-header">
                 <div>
                   <div className="patient-name">{selected.name}</div>
@@ -549,121 +368,126 @@ export default function App() {
                   {report && <button className="btn outline" onClick={exportReport}>↓ Export</button>}
                   <button className="btn outline" onClick={() => {
                     setEditingPatient(selected);
-                    setNewPatient({
-                      name: selected.name || "",
-                      age: selected.age?.toString() || "",
-                      gender: selected.gender || "Female",
-                      location: selected.location || "",
-                      conditions: selected.conditions?.join(", ") || "",
-                      medications: selected.medications?.join(", ") || "",
-                    });
-                    setNewVitals(EMPTY_VITALS);
-                    setShowModal(true);
+                    setNewPatient({ name: selected.name || "", age: selected.age?.toString() || "", gender: selected.gender || "Female", location: selected.location || "", conditions: selected.conditions?.join(", ") || "", medications: selected.medications?.join(", ") || "" });
+                    setNewVitals(EMPTY_V); setShowModal(true);
                   }}>✎ Edit</button>
-                  <button className="btn outline" onClick={() => setShowVitalsModal(true)}>+ Log Vitals</button>
+                  <button className="btn outline" onClick={() => setShowVitalsModal(true)}>+ Vitals</button>
                   <button className="btn" onClick={runAnalysis} disabled={loading}>
-                    {loading ? <><span className="spinner" />&nbsp; Analyzing…</> : "▶ Run Analysis"}
+                    {loading ? <><span className="spinner" />&nbsp;Analyzing…</> : "▶ Run Analysis"}
                   </button>
                 </div>
               </div>
 
-              {/* Demographics Strip */}
-              <div className="demo-strip">
-                <div className="demo-cell">
-                  <div className="demo-cell-label">Age</div>
-                  <div className="demo-cell-value">{selected.age || "—"}</div>
-                </div>
-                <div className="demo-cell">
-                  <div className="demo-cell-label">Gender</div>
-                  <div className="demo-cell-value">{selected.gender || "—"}</div>
-                </div>
-                <div className="demo-cell">
-                  <div className="demo-cell-label">Location</div>
-                  <div className="demo-cell-value" style={{ fontSize: "0.78rem" }}>{selected.location || "—"}</div>
-                </div>
-                <div className="demo-cell">
-                  <div className="demo-cell-label">Conditions</div>
-                  <div className="demo-cell-value">{selected.conditions?.length || 0}</div>
-                </div>
-                <div className="demo-cell">
-                  <div className="demo-cell-label">Medications</div>
-                  <div className="demo-cell-value">{selected.medications?.length || 0}</div>
-                </div>
+              {/* ═══════════════════════════════════════════════════
+                  ZONE A — PERMANENT PATIENT SNAPSHOT
+                  Always visible. Updated after each analysis.
+              ═══════════════════════════════════════════════════ */}
+              <div className="zone-label">
+                <span>Patient Snapshot</span>
+                {selected.last_analyzed && <span style={{ color: "#bbb" }}>Updated {timeAgo(selected.last_analyzed)}</span>}
               </div>
 
-              {/* Conditions + Medications */}
-              <div className="demo-tags-row">
-                <div className="demo-tags-box">
-                  <div className="demo-tags-title">Conditions</div>
-                  {selected.conditions?.map(c => <span key={c} className="tag cond">{c}</span>)}
-                  {!selected.conditions?.length && <span style={{ fontSize: "0.78rem", color: "#aaa" }}>None recorded</span>}
-                </div>
-                <div className="demo-tags-box">
-                  <div className="demo-tags-title">Medications</div>
-                  {selected.medications?.map(m => <span key={m} className="tag med">{m}</span>)}
-                  {!selected.medications?.length && <span style={{ fontSize: "0.78rem", color: "#aaa" }}>None recorded</span>}
-                </div>
-              </div>
+              <div className="snapshot">
 
-              {/* Latest Vitals */}
-              {(() => {
-                const latest = selected.vitals_history?.[selected.vitals_history.length - 1];
-                return (
-                  <div style={{ marginBottom: "1.25rem" }}>
-                    <div className="vitals-section-header">
-                      <span>Latest Vitals {latest && <span style={{ color: "#bbb", fontWeight: 400 }}>· {fmt(latest.timestamp)}</span>}</span>
-                      <span style={{ color: "#bbb" }}>{selected.vitals_history?.length || 0} reading{selected.vitals_history?.length !== 1 ? "s" : ""}</span>
-                    </div>
-                    <div className="vitals-grid">
-                      {[
-                        { label: "Heart Rate", key: "heart_rate", unit: "bpm" },
-                        { label: "BP Systolic", key: "blood_pressure_systolic", unit: "mmHg" },
-                        { label: "BP Diastolic", key: "blood_pressure_diastolic", unit: "mmHg" },
-                        { label: "Temperature", key: "temperature", unit: "°F" },
-                        { label: "O₂ Saturation", key: "oxygen_saturation", unit: "%" },
-                        { label: "Blood Glucose", key: "blood_glucose", unit: "mg/dL" },
-                        { label: "Weight", key: "weight_kg", unit: "kg" },
-                      ].map(({ label, key, unit }) => (
-                        <div key={key} className="vital-cell">
-                          <div className="vital-cell-label">{label}</div>
-                          {latest?.[key] != null
-                            ? <div className="vital-cell-value">{latest[key]}<span className="vital-cell-unit">{unit}</span></div>
-                            : <div className="vital-cell-empty">—</div>}
-                        </div>
-                      ))}
-                    </div>
+                {/* Status line — from last analysis */}
+                {summary ? (
+                  <div className={`snap-status ${summary.level}`}>
+                    <span className="snap-pill">{summary.label}</span>
+                    <span className="snap-reason">{summary.reason}</span>
                   </div>
-                );
-              })()}
+                ) : (
+                  <div className="snap-no-analysis">No analysis run yet — click Run Analysis to generate clinical brief</div>
+                )}
 
-              {/* Notes */}
-              <div className="notes-section">
-                <div className="vitals-section-header">
-                  <span>Notes</span>
-                  <span style={{ color: "#bbb" }}>{selected.notes?.length || 0} note{selected.notes?.length !== 1 ? "s" : ""}</span>
+                {/* Conditions + Medications */}
+                <div className="snap-row">
+                  <span className="snap-row-label">Conditions</span>
+                  <span>{selected.conditions?.length ? selected.conditions.map(c => <span key={c} className="tag cond">{c}</span>) : <span className="snap-row-val" style={{ color: "#ccc" }}>None</span>}</span>
                 </div>
+                <div className="snap-row">
+                  <span className="snap-row-label">Medications</span>
+                  <span>{selected.medications?.length ? selected.medications.map(m => <span key={m} className="tag med">{m}</span>) : <span className="snap-row-val" style={{ color: "#ccc" }}>None</span>}</span>
+                </div>
+
+                {/* Latest vitals clinical table */}
+                {latestVitals && (() => {
+                  const vitalDef = (key, label, unit, reading, rangeLabel, badge) => {
+                    if (reading == null) return null;
+                    return { key, label, unit, reading, rangeLabel, badge };
+                  };
+                  const hr  = latestVitals.heart_rate;
+                  const sys = latestVitals.blood_pressure_systolic;
+                  const dia = latestVitals.blood_pressure_diastolic;
+                  const o2  = latestVitals.oxygen_saturation;
+                  const glu = latestVitals.blood_glucose;
+                  const tmp = latestVitals.temperature;
+                  const wt  = latestVitals.weight_kg;
+
+                  const badge = (val, lo, hi, loWarn, hiWarn) => {
+                    if (val == null) return "na";
+                    if (val < lo || val > hi) return "abnormal";
+                    if (val < loWarn || val > hiWarn) return "borderline";
+                    return "normal";
+                  };
+                  const badgeLabel = { normal: "Normal", borderline: "Borderline", abnormal: "Abnormal", na: "—" };
+
+                  const rows = [
+                    hr  != null && { key: "hr",   label: "Heart Rate",     reading: `${hr} bpm`,              range: "60–100 bpm",      cls: badge(hr, 50, 110, 60, 100) },
+                    sys != null && { key: "bp",   label: "Blood Pressure", reading: `${sys}${dia != null ? `/${dia}` : ""} mmHg`, range: "90–120 / 60–80 mmHg", cls: badge(sys, 80, 140, 90, 120) },
+                    o2  != null && { key: "o2",   label: "O₂ Saturation",  reading: `${o2}%`,                 range: "95–100%",         cls: badge(o2, 90, 100, 95, 100) },
+                    glu != null && { key: "glu",  label: "Blood Glucose",  reading: `${glu} mg/dL`,           range: "70–140 mg/dL",    cls: badge(glu, 60, 180, 70, 140) },
+                    tmp != null && { key: "tmp",  label: "Temperature",    reading: `${tmp}°F`,               range: "97–99°F",         cls: badge(tmp, 95, 103, 97, 99) },
+                    wt  != null && { key: "wt",   label: "Weight",         reading: `${wt} kg`,               range: "—",               cls: "na" },
+                  ].filter(Boolean);
+
+                  if (!rows.length) return null;
+                  return (
+                    <div style={{ borderTop: "1px solid var(--rule)" }}>
+                      <table className="vitals-table">
+                        <thead>
+                          <tr>
+                            <th>Vital Sign</th>
+                            <th>Reading</th>
+                            <th>Normal Range</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map(r => (
+                            <tr key={r.key}>
+                              <td>{r.label}</td>
+                              <td>{r.reading}</td>
+                              <td>{r.range}</td>
+                              <td><span className={`vitals-badge ${r.cls}`}>{badgeLabel[r.cls]}</span></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="vitals-table-footer">Recorded {fmt(latestVitals.timestamp)}</div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Clinical Notes — always visible under snapshot */}
+              <div className="zone-label"><span>Clinical Notes</span><span style={{ color: "#bbb" }}>{selected.notes?.length || 0} note{selected.notes?.length !== 1 ? "s" : ""}</span></div>
+              <div style={{ marginBottom: "1.25rem" }}>
                 <div className="notes-input-row">
-                  <textarea
-                    className="notes-textarea"
-                    placeholder="Add a clinical note…"
-                    value={noteText}
-                    onChange={e => setNoteText(e.target.value)}
-                    onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submitNote(); }}
-                  />
-                  <button className="btn" style={{ alignSelf: "flex-end" }} onClick={submitNote} disabled={!noteText.trim()}>
-                    Add
-                  </button>
+                  <textarea className="notes-textarea" placeholder="Add a clinical note… (Cmd+Enter to save)"
+                    value={noteText} onChange={e => setNoteText(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submitNote(); }} />
+                  <button className="btn" style={{ alignSelf: "flex-end" }} onClick={submitNote} disabled={!noteText.trim()}>Add</button>
                 </div>
-                {selected.notes?.length === 0 || !selected.notes ? (
-                  <div className="history-empty">No notes yet</div>
+                {(!selected.notes?.length) ? (
+                  <div className="empty-sub">No notes yet</div>
                 ) : (
                   [...(selected.notes || [])].reverse().map(n => (
                     <div key={n._id} className="note-item">
                       <div style={{ flex: 1 }}>
-                        <div className="note-item-body">{n.text}</div>
-                        <div className="note-item-meta">{fmt(n.created_at)}</div>
+                        <div className="note-body">{n.text}</div>
+                        <div className="note-meta">{fmt(n.created_at)}</div>
                       </div>
-                      <button className="note-delete" onClick={() => deleteNoteById(n._id)} title="Delete note">✕</button>
+                      <button className="note-del" onClick={() => deleteNote(n._id)}>✕</button>
                     </div>
                   ))
                 )}
@@ -683,285 +507,164 @@ export default function App() {
                 </>
               )}
 
-              {/* Report */}
-              {report && (() => {
-                const summary  = parseSummary(report.final_report);
-                const medsText = parseSection(report.final_report, "MEDICATIONS");
-                const condsText= parseSection(report.final_report, "CONDITIONS");
-                const vitText  = parseSection(report.final_report, "VITALS");
-                const envText  = parseSection(report.final_report, "ENVIRONMENT");
-                const medsEntries  = parseEntries(medsText);
-                const condsEntries = parseEntries(condsText);
-                const vitalRows    = parseVitalRows(vitText);
-                const envLines     = (envText || "").split("\n").map(l => l.trim()).filter(Boolean);
-                return (
-                  <>
-                    <div style={{ fontFamily: "var(--mono)", fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#999", marginBottom: "0.6rem", display: "flex", justifyContent: "space-between" }}>
-                      <span>Clinical Brief — {selected.name}</span>
-                      <span>{fmt(report.generated_at)}</span>
-                    </div>
+              {/* ═══════════════════════════════════════════════════
+                  ZONE B — LIVE WEB INTELLIGENCE
+                  Only shown after analysis. Clearly separated.
+              ═══════════════════════════════════════════════════ */}
+              {report && (
+                <>
+                  <div className="zone-label">
+                    <span>Live Web Intelligence</span>
+                    <span className="live">● {fmt(report.generated_at)}</span>
+                  </div>
 
-                    <div className="brief-wrap">
+                  {/* Clinical Brief — structured summary from coordinator */}
+                  {summary && (
+                    <div className="live-summary" style={{ marginBottom: "0.75rem" }}>
+                      <div className="live-summary-header">
+                        <span className="live-summary-title">📋 Clinical Brief</span>
+                        <span className="live-summary-date">{fmt(report.generated_at)}</span>
+                      </div>
 
-                      {/* 1. Status */}
-                      {summary && (
-                        <div className={`status-banner ${summary.statusLevel}`}>
-                          <span className="status-pill">{summary.statusLabel}</span>
-                          <span className="status-reason">{summary.statusReason}</span>
-                        </div>
-                      )}
-
-                      {/* 2. Key Findings */}
-                      {summary?.findings?.length > 0 && (
-                        <div className="brief-section">
-                          <div className="brief-section-header">Key Findings</div>
+                      {summary.findings?.length > 0 && (
+                        <>
+                          <div style={{ padding: "0.45rem 1rem", background: "var(--cream)", borderBottom: "1px solid var(--rule)", fontFamily: "var(--mono)", fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#999" }}>Key Findings</div>
                           <ul className="findings-list">
                             {summary.findings.map((f, i) => (
-                              <li key={i}>
-                                <span className="finding-num">{i + 1}.</span>
-                                <span>{f}</span>
-                              </li>
+                              <li key={i}><span className="finding-num">{i + 1}.</span><span>{cleanText(f)}</span></li>
                             ))}
                           </ul>
-                        </div>
+                        </>
                       )}
 
-                      {/* 3. Action Steps */}
-                      {summary?.nextSteps?.length > 0 && (
-                        <div className="brief-section">
-                          <div className="brief-section-header">Action Steps</div>
+                      {summary.nextSteps?.length > 0 && (
+                        <>
+                          <div style={{ padding: "0.45rem 1rem", background: "var(--cream)", borderTop: "1px solid var(--rule)", borderBottom: "1px solid var(--rule)", fontFamily: "var(--mono)", fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#999" }}>Action Steps</div>
                           <ul className="steps-list">
                             {summary.nextSteps.map((s, i) => {
-                              const parts = s.match(/^For (.+?) →\s*(.+)$/i);
+                              const parts = cleanText(s).match(/^For (.+?) →\s*(.+)$/i);
                               return (
                                 <li key={i}>
                                   <span className="step-num">{i + 1}</span>
                                   <span className="step-body">
-                                    {parts
-                                      ? <>For <span className="step-cond">{parts[1]}</span> <span style={{ color: "#aaa" }}>→</span> <span className="step-action">{parts[2]}</span></>
-                                      : s}
+                                    {parts ? <>For <span className="step-cond">{parts[1]}</span> <span style={{ color: "#bbb" }}>→</span> {parts[2]}</> : cleanText(s)}
                                   </span>
                                 </li>
                               );
                             })}
                           </ul>
-                        </div>
+                        </>
                       )}
 
-                      {/* 4. Medications */}
-                      {medsEntries.length > 0 && (
-                        <div className="brief-section">
-                          <div className="brief-section-header">💊 Medications</div>
-                          <ul className="entry-list">
-                            {medsEntries.map((e, i) => {
-                              const pill = e.name ? entryPill(e.rest) : null;
-                              return (
-                                <li key={i} className="entry-item">
-                                  {e.name && (
-                                    <div className="entry-name">
-                                      {e.name}
-                                      {pill && <span className={`entry-pill ${pill.cls}`}>{pill.label}</span>}
-                                    </div>
-                                  )}
-                                  <div className="entry-detail">{e.rest.replace(/^(Controlled|Borderline|Uncontrolled)[—\s]*/i, "")}</div>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* 5. Conditions */}
-                      {condsEntries.length > 0 && (
-                        <div className="brief-section">
-                          <div className="brief-section-header">🔬 Conditions</div>
-                          <ul className="entry-list">
-                            {condsEntries.map((e, i) => {
-                              const pill = e.name ? entryPill(e.rest) : null;
-                              return (
-                                <li key={i} className="entry-item">
-                                  {e.name && (
-                                    <div className="entry-name">
-                                      {e.name}
-                                      {pill && <span className={`entry-pill ${pill.cls}`}>{pill.label}</span>}
-                                    </div>
-                                  )}
-                                  <div className="entry-detail">{e.rest.replace(/^(Controlled|Borderline|Uncontrolled)[—\s]*/i, "")}</div>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* 6. Vitals */}
-                      {vitalRows.length > 0 && (
-                        <div className="brief-section">
-                          <div className="brief-section-header">📊 Vitals</div>
-                          <ul className="vital-rows">
-                            {vitalRows.map((v, i) => (
-                              <li key={i} className="vital-row">
-                                <span className="vital-row-name">{v.label}</span>
-                                <span className="vital-row-range">{v.range}</span>
-                                <span className="vital-row-status">{v.interp}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* 7. Environment */}
-                      {envLines.length > 0 && (
-                        <div className="brief-section">
-                          <div className="brief-section-header">🌍 Environment</div>
-                          <div className="env-body">
-                            {envLines.map((l, i) => (
-                              <div key={i} className={`env-line ${/precaution/i.test(l) ? "precaution" : ""}`}>
-                                {l.replace(/^\*\*(.+?)\*\*/g, "$1")}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 8. Follow-up */}
-                      {summary?.followUp && (
+                      {summary.followUp && (
                         <div className="followup-bar">
-                          <span className="followup-bar-label">Follow-up</span>
-                          <span>{summary.followUp}</span>
+                          <span className="followup-label">Follow-up</span>
+                          <span>{cleanText(summary.followUp)}</span>
                         </div>
                       )}
-
                     </div>
-                  </>
-                );
-              })()}
+                  )}
 
-              {/* Analysis History */}
-              <div className="history-section">
-                <div className="history-header">
-                  <span>Analysis History</span>
-                  <span style={{ color: "#bbb" }}>{history.length} record{history.length !== 1 ? "s" : ""}</span>
-                </div>
-                {history.length === 0 && (
-                  <div className="history-empty">No past analyses — run the first analysis above</div>
-                )}
-                {history.map((h, i) => (
+                  {/* Agent errors */}
+                  {report.errors?.length > 0 && (
+                    <div style={{ background: "#fff5f5", border: "1px solid #f5c6c6", borderRadius: "4px", padding: "0.65rem 0.9rem", marginBottom: "0.75rem" }}>
+                      <div style={{ fontFamily: "var(--mono)", fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#c94f2e", marginBottom: "0.35rem", fontWeight: 600 }}>Agent Errors</div>
+                      {report.errors.map((e, i) => (
+                        <div key={i} style={{ fontFamily: "var(--mono)", fontSize: "0.72rem", color: "#b03a2a", lineHeight: 1.6 }}>{e}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Agent Raw Intelligence Cards */}
+                  <div className="agent-grid">
+                    <div className="agent-card">
+                      <div className="agent-card-hdr green">🔬 Research</div>
+                      <div className="agent-card-body">{cleanText(report.research_findings?.[0] || "No findings")}</div>
+                    </div>
+                    <div className="agent-card">
+                      <div className="agent-card-hdr amber">💊 Medication</div>
+                      <div className="agent-card-body">{cleanText(report.medication_alerts?.[0] || "No alerts")}</div>
+                    </div>
+                    <div className="agent-card">
+                      <div className="agent-card-hdr blue">🌍 Environment</div>
+                      <div className="agent-card-body">{cleanText(report.environment_risks?.[0] || "No risks")}</div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* ═══════════════════════════════════════════════════
+                  ZONE C — ANALYSIS HISTORY
+              ═══════════════════════════════════════════════════ */}
+              <div className="zone-label"><span>Analysis History</span><span style={{ color: "#bbb" }}>{history.length} record{history.length !== 1 ? "s" : ""}</span></div>
+              {history.length === 0
+                ? <div className="empty-sub">No past analyses yet</div>
+                : history.map((h, i) => (
                   <div key={h._id || i} className="history-item" onClick={() => setExpandedHistory(expandedHistory === i ? null : i)}>
-                    <div className="history-item-header">
-                      <div>
-                        <div className="history-item-date">
-                          {i === 0 && report ? "▼ Latest — " : ""}
-                          {fmt(h.generated_at)}
-                        </div>
-                      </div>
+                    <div className="history-item-hdr">
+                      <div className="history-item-date">{i === 0 && report ? "Latest · " : ""}{fmt(h.generated_at)}</div>
                       <div className="history-item-ago">{timeAgo(h.generated_at)} {expandedHistory === i ? "▲" : "▼"}</div>
                     </div>
-                    {expandedHistory === i && (
-                      <div className="history-item-body">{h.final_report || "No report content"}</div>
-                    )}
+                    {expandedHistory === i && <div className="history-item-body">{h.final_report || "No content"}</div>}
                   </div>
-                ))}
-              </div>
+                ))
+              }
             </>
           )}
         </main>
       </div>
 
-      {/* Log Vitals Modal */}
+      {/* Vitals Modal */}
       {showVitalsModal && (
         <div className="modal-overlay" onClick={() => setShowVitalsModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-title">Log Vitals — {selected?.name}</div>
             <div className="form-row">
-              {[
-                { label: "Heart Rate (bpm)", key: "heart_rate" },
-                { label: "BP Systolic (mmHg)", key: "blood_pressure_systolic" },
-                { label: "BP Diastolic (mmHg)", key: "blood_pressure_diastolic" },
-                { label: "Temperature (°F)", key: "temperature" },
-                { label: "O₂ Saturation (%)", key: "oxygen_saturation" },
-                { label: "Blood Glucose (mg/dL)", key: "blood_glucose" },
-                { label: "Weight (kg)", key: "weight_kg" },
-              ].map(({ label, key }) => (
+              {[["Heart Rate (bpm)", "heart_rate"], ["BP Systolic (mmHg)", "blood_pressure_systolic"], ["BP Diastolic (mmHg)", "blood_pressure_diastolic"], ["Temperature (°F)", "temperature"], ["O₂ Saturation (%)", "oxygen_saturation"], ["Blood Glucose (mg/dL)", "blood_glucose"], ["Weight (kg)", "weight_kg"]].map(([label, key]) => (
                 <div className="form-group" key={key}>
                   <label className="form-label">{label}</label>
-                  <input className="form-input" type="number" value={newVitals[key]}
-                    onChange={e => setNewVitals(v => ({ ...v, [key]: e.target.value }))} placeholder="—" />
+                  <input className="form-input" type="number" value={newVitals[key]} onChange={e => setNewVitals(v => ({ ...v, [key]: e.target.value }))} placeholder="—" />
                 </div>
               ))}
             </div>
             <div style={{ display: "flex", gap: "0.6rem", marginTop: "1.25rem" }}>
-              <button className="btn" onClick={submitVitals}
-                disabled={Object.values(newVitals).every(v => v === "")}>
-                Save Vitals
-              </button>
+              <button className="btn" onClick={submitVitals} disabled={Object.values(newVitals).every(v => v === "")}>Save Vitals</button>
               <button className="btn outline" onClick={() => setShowVitalsModal(false)}>Cancel</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Add / Edit Patient Modal */}
+      {/* Add/Edit Patient Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => { setShowModal(false); setEditingPatient(null); setNewPatient(EMPTY_PATIENT); setNewVitals(EMPTY_VITALS); }}>
+        <div className="modal-overlay" onClick={() => { setShowModal(false); setEditingPatient(null); setNewPatient(EMPTY_P); setNewVitals(EMPTY_V); }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">{editingPatient ? `Edit Patient — ${editingPatient.name}` : "Add New Patient"}</div>
+            <div className="modal-title">{editingPatient ? `Edit — ${editingPatient.name}` : "Add New Patient"}</div>
             <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Full Name</label>
-                <input className="form-input" type="text" value={newPatient.name}
-                  onChange={e => setNewPatient(p => ({ ...p, name: e.target.value }))} placeholder="Full Name" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Age</label>
-                <input className="form-input" type="number" value={newPatient.age}
-                  onChange={e => setNewPatient(p => ({ ...p, age: e.target.value }))} placeholder="Age" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Gender</label>
+              {[["Full Name", "name", "text"], ["Age", "age", "number"]].map(([label, key, type]) => (
+                <div className="form-group" key={key}><label className="form-label">{label}</label>
+                  <input className="form-input" type={type} value={newPatient[key]} onChange={e => setNewPatient(p => ({ ...p, [key]: e.target.value }))} placeholder={label} /></div>
+              ))}
+              <div className="form-group"><label className="form-label">Gender</label>
                 <select className="form-input" value={newPatient.gender} onChange={e => setNewPatient(p => ({ ...p, gender: e.target.value }))}>
-                  <option>Female</option><option>Male</option><option>Other</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Location (City, State)</label>
-                <input className="form-input" type="text" value={newPatient.location}
-                  onChange={e => setNewPatient(p => ({ ...p, location: e.target.value }))} placeholder="City, State" />
-              </div>
+                  <option>Female</option><option>Male</option><option>Other</option></select></div>
+              <div className="form-group"><label className="form-label">Location</label>
+                <input className="form-input" type="text" value={newPatient.location} onChange={e => setNewPatient(p => ({ ...p, location: e.target.value }))} placeholder="City, State" /></div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Conditions (comma separated)</label>
-              <input className="form-input" type="text" value={newPatient.conditions}
-                onChange={e => setNewPatient(p => ({ ...p, conditions: e.target.value }))} placeholder="e.g. Diabetes, Hypertension" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Medications (comma separated)</label>
-              <input className="form-input" type="text" value={newPatient.medications}
-                onChange={e => setNewPatient(p => ({ ...p, medications: e.target.value }))} placeholder="e.g. Metformin, Lisinopril" />
-            </div>
-            <div className="section-divider">Vitals (optional)</div>
+            <div className="form-group"><label className="form-label">Conditions (comma separated)</label>
+              <input className="form-input" value={newPatient.conditions} onChange={e => setNewPatient(p => ({ ...p, conditions: e.target.value }))} placeholder="e.g. Breast Cancer Stage 2, Hypertension" /></div>
+            <div className="form-group"><label className="form-label">Medications (comma separated)</label>
+              <input className="form-input" value={newPatient.medications} onChange={e => setNewPatient(p => ({ ...p, medications: e.target.value }))} placeholder="e.g. Tamoxifen, Lisinopril" /></div>
+            <div className="modal-divider">Initial Vitals (optional)</div>
             <div className="form-row">
-              {[
-                { label: "Heart Rate (bpm)", key: "heart_rate" },
-                { label: "BP Systolic (mmHg)", key: "blood_pressure_systolic" },
-                { label: "BP Diastolic (mmHg)", key: "blood_pressure_diastolic" },
-                { label: "Temperature (°F)", key: "temperature" },
-                { label: "O₂ Saturation (%)", key: "oxygen_saturation" },
-                { label: "Blood Glucose (mg/dL)", key: "blood_glucose" },
-                { label: "Weight (kg)", key: "weight_kg" },
-              ].map(({ label, key }) => (
-                <div className="form-group" key={key}>
-                  <label className="form-label">{label}</label>
-                  <input className="form-input" type="number" value={newVitals[key]}
-                    onChange={e => setNewVitals(v => ({ ...v, [key]: e.target.value }))} placeholder="—" />
-                </div>
+              {[["Heart Rate (bpm)", "heart_rate"], ["BP Systolic", "blood_pressure_systolic"], ["BP Diastolic", "blood_pressure_diastolic"], ["Temperature (°F)", "temperature"], ["O₂ Sat (%)", "oxygen_saturation"], ["Glucose (mg/dL)", "blood_glucose"], ["Weight (kg)", "weight_kg"]].map(([label, key]) => (
+                <div className="form-group" key={key}><label className="form-label">{label}</label>
+                  <input className="form-input" type="number" value={newVitals[key]} onChange={e => setNewVitals(v => ({ ...v, [key]: e.target.value }))} placeholder="—" /></div>
               ))}
             </div>
             <div style={{ display: "flex", gap: "0.6rem", marginTop: "1.25rem" }}>
-              <button className="btn" onClick={savePatient} disabled={!newPatient.name}>
-                {editingPatient ? "Save Changes" : "Add Patient"}
-              </button>
-              <button className="btn outline" onClick={() => { setShowModal(false); setEditingPatient(null); setNewPatient(EMPTY_PATIENT); setNewVitals(EMPTY_VITALS); }}>Cancel</button>
+              <button className="btn" onClick={savePatient} disabled={!newPatient.name}>{editingPatient ? "Save Changes" : "Add Patient"}</button>
+              <button className="btn outline" onClick={() => { setShowModal(false); setEditingPatient(null); setNewPatient(EMPTY_P); setNewVitals(EMPTY_V); }}>Cancel</button>
             </div>
           </div>
         </div>

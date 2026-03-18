@@ -31,19 +31,14 @@ class PatientHealthState(TypedDict):
     current_step: str
 
 
-# ── Agent Instances ───────────────────────────────────────────────────────────
-research_agent = ResearchAgent()
-medication_agent = MedicationAgent()
-environment_agent = EnvironmentAgent()
-monitor_agent = MonitorAgent()
-coordinator_agent = CoordinatorAgent()
-
-
 # ── Node Functions ────────────────────────────────────────────────────────────
+# Agents are instantiated inside each node function (not at module level)
+# so a missing API key never crashes the app on startup.
+
 def run_research(state: PatientHealthState) -> dict:
     """Agent 1: Search latest medical research for patient conditions."""
     try:
-        findings = research_agent.run(state["patient_data"])
+        findings = ResearchAgent().run(state["patient_data"])
         return {"research_findings": findings, "current_step": "research_done"}
     except Exception as e:
         return {"errors": [f"Research agent error: {str(e)}"], "current_step": "research_done"}
@@ -52,7 +47,7 @@ def run_research(state: PatientHealthState) -> dict:
 def run_medication_check(state: PatientHealthState) -> dict:
     """Agent 2: Check real-time drug interactions and FDA alerts."""
     try:
-        alerts = medication_agent.run(state["patient_data"])
+        alerts = MedicationAgent().run(state["patient_data"])
         return {"medication_alerts": alerts, "current_step": "medication_done"}
     except Exception as e:
         return {"errors": [f"Medication agent error: {str(e)}"], "current_step": "medication_done"}
@@ -61,7 +56,7 @@ def run_medication_check(state: PatientHealthState) -> dict:
 def run_environment_check(state: PatientHealthState) -> dict:
     """Agent 3: Check local air quality, outbreaks, allergens."""
     try:
-        risks = environment_agent.run(state["patient_data"])
+        risks = EnvironmentAgent().run(state["patient_data"])
         return {"environment_risks": risks, "current_step": "environment_done"}
     except Exception as e:
         return {"errors": [f"Environment agent error: {str(e)}"], "current_step": "environment_done"}
@@ -70,7 +65,7 @@ def run_environment_check(state: PatientHealthState) -> dict:
 def run_monitor(state: PatientHealthState) -> dict:
     """Agent 4: Analyze vitals trends vs current medical benchmarks."""
     try:
-        summary = monitor_agent.run(
+        summary = MonitorAgent().run(
             state["patient_data"], state.get("research_findings", []))
         return {"monitor_summary": summary, "current_step": "monitor_done"}
     except Exception as e:
@@ -80,7 +75,7 @@ def run_monitor(state: PatientHealthState) -> dict:
 def run_coordinator(state: PatientHealthState) -> dict:
     """Agent 5: Synthesize all findings into a final health report."""
     try:
-        report = coordinator_agent.run(state)
+        report = CoordinatorAgent().run(state)
         return {"final_report": report, "current_step": "complete"}
     except Exception as e:
         return {"errors": [f"Coordinator agent error: {str(e)}"], "current_step": "complete"}
