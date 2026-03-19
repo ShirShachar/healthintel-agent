@@ -21,6 +21,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://d3pk95hm8g7yg0.cloudfront.net",
+        "https://dl0r41wj7ovw4.cloudfront.net",
         "http://healthintel-frontend-app.s3-website-us-east-1.amazonaws.com",
         "http://localhost:4173",
         "http://localhost:5173",
