@@ -258,19 +258,34 @@ export default function App() {
   const runAnalysis = async () => {
     if (!selected) return;
     setLoading(true); setReport(null); setActiveStep(0);
-    for (let i = 0; i < AGENT_STEPS.length; i++) { setActiveStep(i); await new Promise(r => setTimeout(r, 900)); }
     try {
+      // Start analysis — returns immediately with a job_id
       const res = await fetch(`${API_BASE}/analyze`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ patient_id: selected._id }),
       });
-      const data = await res.json();
-      const r = { ...data, generated_at: new Date().toISOString() };
-      setReport(r);
-      setHistory(prev => [{ _id: data.report_id, final_report: data.final_report, generated_at: r.generated_at }, ...prev]);
-      fetch(`${API_BASE}/patients/${selected._id}`).then(x => x.json()).then(p => {
-        setSelected(p); setPatients(prev => prev.map(x => x._id === p._id ? p : x));
-      }).catch(() => { });
+      const { job_id } = await res.json();
+
+      // Animate agent steps while polling
+      let step = 0;
+      while (true) {
+        await new Promise(r => setTimeout(r, 3000));
+        setActiveStep(Math.min(step++, AGENT_STEPS.length - 1));
+        const statusRes = await fetch(`${API_BASE}/analyze/status/${job_id}`);
+        const data = await statusRes.json();
+        if (data.status === "complete") {
+          const r = { ...data, generated_at: new Date().toISOString() };
+          setReport(r);
+          setHistory(prev => [{ _id: data.report_id, final_report: data.final_report, generated_at: r.generated_at }, ...prev]);
+          fetch(`${API_BASE}/patients/${selected._id}`).then(x => x.json()).then(p => {
+            setSelected(p); setPatients(prev => prev.map(x => x._id === p._id ? p : x));
+          }).catch(() => { });
+          break;
+        } else if (data.status === "error") {
+          alert("Analysis failed: " + data.error);
+          break;
+        }
+      }
     } catch (err) { console.error("Analysis failed", err); alert("Analysis failed — check that the backend is running and API keys are set."); }
     setLoading(false); setActiveStep(-1);
   };
