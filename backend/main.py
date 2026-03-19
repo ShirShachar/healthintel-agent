@@ -19,7 +19,13 @@ app = FastAPI(title="Patient Health Intelligence API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://healthintel-frontend-app.s3-website-us-east-1.amazonaws.com",
+        "http://localhost:4173",
+        "http://localhost:5173",
+        "*",
+    ],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
