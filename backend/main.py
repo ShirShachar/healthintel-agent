@@ -2,9 +2,11 @@
 FastAPI Backend - Patient Health Intelligence System
 """
 import os
+import uuid
+from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 load_dotenv()
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -32,6 +34,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Thread pool for running the blocking LangGraph pipeline
+_executor = ThreadPoolExecutor(max_workers=4)
+
+# In-memory job store: {job_id: {status, result, ...}}
+_jobs: dict = {}
+
 
 class PatientCreate(BaseModel):
     name: str
@@ -57,7 +65,32 @@ class AnalysisRequest(BaseModel):
     vitals: Optional[VitalsUpdate] = None
 
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _run_pipeline(job_id: str, patient_id: str, initial_state: dict):
+    """Runs the LangGraph pipeline in a background thread."""
+    try:
+        result = health_graph.invoke(initial_state)
+        report_id = save_report(patient_id, result)
+        log_query(patient_id, "full_analysis", {"report_id": report_id})
+        update_patient_after_analysis(patient_id, result)
+        _jobs[job_id] = {
+            "status": "complete",
+            "patient_id": patient_id,
+            "report_id": report_id,
+            "final_report": result.get("final_report"),
+            "research_findings": result.get("research_findings", []),
+            "medication_alerts": result.get("medication_alerts", []),
+            "environment_risks": result.get("environment_risks", []),
+            "monitor_summary": result.get("monitor_summary"),
+            "errors": result.get("errors", []),
+        }
+    except Exception as e:
+        _jobs[job_id] = {"status": "error", "error": str(e)}
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
+
 @app.get("/")
 def root():
     return {"status": "Patient Health Intelligence System is running"}
@@ -99,16 +132,15 @@ def add_vitals(patient_id: str, vitals: VitalsUpdate):
 
 @app.post("/analyze")
 async def run_analysis(request: AnalysisRequest):
-    """Main endpoint: triggers the full multi-agent pipeline."""
+    """Starts analysis in a background thread and returns a job ID immediately."""
+    import asyncio
     patient = get_patient(request.patient_id)
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
-    # Use latest vitals from history if not provided
     vitals = {}
     if request.vitals:
-        vitals = {k: v for k, v in request.vitals.model_dump().items()
-                  if v is not None}
+        vitals = {k: v for k, v in request.vitals.model_dump().items() if v is not None}
     elif patient.get("vitals_history"):
         vitals = patient["vitals_history"][-1]
         vitals.pop("timestamp", None)
@@ -126,7 +158,6 @@ async def run_analysis(request: AnalysisRequest):
         "notes": notes,
     }
 
-    # Run LangGraph pipeline
     initial_state = {
         "patient_id": request.patient_id,
         "patient_data": patient_data,
@@ -139,23 +170,22 @@ async def run_analysis(request: AnalysisRequest):
         "current_step": "starting",
     }
 
-    result = health_graph.invoke(initial_state)
+    job_id = str(uuid.uuid4())
+    _jobs[job_id] = {"status": "running", "patient_id": request.patient_id}
 
-    # Save to MongoDB
-    report_id = save_report(request.patient_id, result)
-    log_query(request.patient_id, "full_analysis", {"report_id": report_id})
-    update_patient_after_analysis(request.patient_id, result)
+    # Run the blocking pipeline in a thread so the event loop stays free
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(_executor, _run_pipeline, job_id, request.patient_id, initial_state)
 
-    return {
-        "report_id": report_id,
-        "patient_id": request.patient_id,
-        "final_report": result.get("final_report"),
-        "research_findings": result.get("research_findings", []),
-        "medication_alerts": result.get("medication_alerts", []),
-        "environment_risks": result.get("environment_risks", []),
-        "monitor_summary": result.get("monitor_summary"),
-        "errors": result.get("errors", []),
-    }
+    return {"job_id": job_id, "status": "running"}
+
+
+@app.get("/analyze/status/{job_id}")
+def get_analysis_status(job_id: str):
+    """Poll this endpoint to check if an analysis job is complete."""
+    if job_id not in _jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return _jobs[job_id]
 
 
 class NoteCreate(BaseModel):
