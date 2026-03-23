@@ -4,9 +4,12 @@ Checks real-time FDA alerts, drug interactions, and medication warnings.
 Uses Tavily: search + crawl
 """
 import os
+import logging
 
 from openai import OpenAI
 from tavily import TavilyClient
+
+logger = logging.getLogger("agent.medication")
 
 
 class MedicationAgent:
@@ -16,9 +19,11 @@ class MedicationAgent:
 
     def run(self, patient_data: dict) -> list[str]:
         medications = patient_data.get("medications", [])
+        logger.info("Checking medications: %s", medications)
         alerts = []
 
         if not medications:
+            logger.info("No medications listed — skipping")
             return ["No medications listed for this patient."]
 
         meds_str = ", ".join(medications)
@@ -84,4 +89,5 @@ Be concise and clinical. Flag anything urgent with ⚠️
         )
 
         alerts.append(response.choices[0].message.content)
+        logger.info("Medication agent done — %d alert(s) returned", len(alerts))
         return alerts

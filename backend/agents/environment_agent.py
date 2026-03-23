@@ -4,9 +4,12 @@ Checks local air quality, disease outbreaks, allergen levels, weather risks.
 Uses Tavily: search + map
 """
 import os
+import logging
 
 from openai import OpenAI
 from tavily import TavilyClient
+
+logger = logging.getLogger("agent.environment")
 
 
 class EnvironmentAgent:
@@ -17,6 +20,7 @@ class EnvironmentAgent:
     def run(self, patient_data: dict) -> list[str]:
         location = patient_data.get("location", "United States")
         conditions = patient_data.get("conditions", [])
+        logger.info("Checking environment for location: %s", location)
         risks = []
 
         # 1. Search local air quality
@@ -88,4 +92,5 @@ Use ⚠️ for urgent items and ✅ for clear/safe status.
         )
 
         risks.append(response.choices[0].message.content)
+        logger.info("Environment agent done — %d risk(s) returned", len(risks))
         return risks

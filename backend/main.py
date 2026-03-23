@@ -3,9 +3,17 @@ FastAPI Backend - Patient Health Intelligence System
 """
 import os
 import uuid
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("main")
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -69,11 +77,13 @@ class AnalysisRequest(BaseModel):
 
 def _run_pipeline(job_id: str, patient_id: str, initial_state: dict):
     """Runs the LangGraph pipeline in a background thread."""
+    logger.info("Job %s started for patient %s", job_id, patient_id)
     try:
         result = health_graph.invoke(initial_state)
         report_id = save_report(patient_id, result)
         log_query(patient_id, "full_analysis", {"report_id": report_id})
         update_patient_after_analysis(patient_id, result)
+        logger.info("Job %s complete — report_id=%s", job_id, report_id)
         _jobs[job_id] = {
             "status": "complete",
             "patient_id": patient_id,
@@ -86,6 +96,7 @@ def _run_pipeline(job_id: str, patient_id: str, initial_state: dict):
             "errors": result.get("errors", []),
         }
     except Exception as e:
+        logger.error("Job %s failed: %s", job_id, str(e))
         _jobs[job_id] = {"status": "error", "error": str(e)}
 
 

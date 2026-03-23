@@ -4,8 +4,11 @@ Searches latest medical research, CDC/WHO updates for patient conditions.
 Uses Tavily: search + extract
 """
 import os
+import logging
 from tavily import TavilyClient
 from openai import OpenAI
+
+logger = logging.getLogger("agent.research")
 
 
 class ResearchAgent:
@@ -15,9 +18,11 @@ class ResearchAgent:
 
     def run(self, patient_data: dict) -> list[str]:
         conditions = patient_data.get("conditions", [])
+        logger.info("Starting research for %d condition(s): %s", len(conditions), conditions)
         findings = []
 
         for condition in conditions:
+            logger.info("Searching research for: %s", condition)
             # 1. Search latest research (domain-restricted, fall back to open search)
             search_results = self.tavily.search(
                 query=f"latest treatment guidelines {condition} 2024 2025",
@@ -67,5 +72,7 @@ Respond with exactly 3 bullet points. Be specific and clinical.
                 )
                 summary = response.choices[0].message.content
                 findings.append(f"**{condition}**: {summary}")
+                logger.info("Research complete for: %s", condition)
 
+        logger.info("Research agent done — %d finding(s) returned", len(findings))
         return findings

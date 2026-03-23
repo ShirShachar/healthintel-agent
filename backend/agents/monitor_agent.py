@@ -4,9 +4,12 @@ Analyzes patient vitals trends against current medical benchmarks.
 Uses research findings from Agent 1 to contextualize readings.
 """
 import os
+import logging
 
 from openai import OpenAI
 from tavily import TavilyClient
+
+logger = logging.getLogger("agent.monitor")
 
 
 class MonitorAgent:
@@ -19,6 +22,8 @@ class MonitorAgent:
         conditions = patient_data.get("conditions", [])
         age = patient_data.get("age", "unknown")
         gender = patient_data.get("gender", "unknown")
+        logger.info("Analyzing vitals for age=%s gender=%s conditions=%s vitals=%s",
+                    age, gender, conditions, list(vitals.keys()))
 
         # 1. Search current clinical benchmarks for patient's age/conditions
         benchmark_results = self.tavily.search(
@@ -74,4 +79,6 @@ Keep it concise and actionable for busy medical staff.
             max_tokens=500
         )
 
-        return response.choices[0].message.content
+        summary = response.choices[0].message.content
+        logger.info("Monitor agent done")
+        return summary

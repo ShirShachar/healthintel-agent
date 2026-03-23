@@ -3,9 +3,13 @@ Agent 5 - Coordinator Agent
 Synthesizes all agent findings into a precise, clinical health report.
 Output is specific to the patient's exact conditions, medications, and stage.
 """
-from openai import OpenAI
-from datetime import datetime
+import logging
 import os
+from datetime import datetime
+
+from openai import OpenAI
+
+logger = logging.getLogger("agent.coordinator")
 
 
 class CoordinatorAgent:
@@ -13,6 +17,7 @@ class CoordinatorAgent:
         self.llm = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     def run(self, state: dict) -> str:
+        logger.info("Synthesizing final report for patient_id=%s", state.get("patient_id"))
         patient_data = state.get("patient_data", {})
         research_findings = state.get("research_findings", [])
         medication_alerts = state.get("medication_alerts", [])
@@ -102,8 +107,13 @@ Precaution: [one concrete action for today, tied to a named condition].
 3. For [specific condition or drug] → [concrete action]
 4. For environment/other → [concrete action]
 
-### 📅 FOLLOW-UP
-[Specific timeframe] to [specific test or check] — reason: [one sentence naming the condition and what you expect to see].
+---
+
+### 📅 FOLLOW-UP BY CONDITION
+Write one line per condition in this list: {conditions_str}
+Format each as:
+- **[Condition]** → [specific next appointment, lab test, or procedure recommended] within [concrete timeframe — e.g. 30 days, next visit, 60 days] — reason: [one sentence citing the specific finding or value that makes this the priority].
+Base the timeframe and action on what the analysis actually found for that condition, not generic guidelines.
 """
 
         response = self.llm.chat.completions.create(
@@ -112,4 +122,5 @@ Precaution: [one concrete action for today, tied to a named condition].
             max_tokens=1500
         )
 
+        logger.info("Coordinator agent done — report generated")
         return response.choices[0].message.content
